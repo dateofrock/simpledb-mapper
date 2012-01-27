@@ -6,6 +6,7 @@ simpledb-mapperは、Amazon SimpleDBのデータマッパーユーティリテ�
 Install
 ----
 Mavenのリポジトリを用意してありますので、pom.xmlに以下の記述を追加してください。
+
 ```xml
 <repositories>
 	<repository>
@@ -21,7 +22,6 @@ Mavenのリポジトリを用意してありますので、pom.xmlに以下の�
 	<artifactId>simpledb-mapper</artifactId>
 	<version>使用したいバージョン</version>
 </dependency>
-
 ```
 
 
