@@ -124,7 +124,7 @@ Mavenのリポジトリを用意してありますので、pom.xmlに以下の�
 	<dependency>
 		<groupId>com.dateofrock.aws</groupId>
 		<artifactId>simpledb-mapper</artifactId>
-		<version>使用したいバージョン</version>
+		<version>0.2-SNAPSHOT</version>
 	</dependency>
 </dependencies>
 ```
