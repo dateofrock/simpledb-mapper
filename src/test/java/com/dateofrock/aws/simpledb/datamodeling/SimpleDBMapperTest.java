@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -28,6 +30,7 @@ import java.util.List;
 import model.Book;
 
 import org.junit.Before;
+import org.junit.Test;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.PropertiesCredentials;
@@ -114,41 +117,40 @@ public class SimpleDBMapperTest {
 
 	}
 
-	// @Test
-	// public void testManyBooks() throws Exception {
-	// List<Book> manyBooks = new ArrayList<Book>();
-	// for (int i = 0; i < 2600; i++) {
-	// Book book = newBook1((long) i);
-	// book.price += i;
-	// manyBooks.add(book);
-	// this.mapper.save(book);
-	// }
-	//
-	// assertEquals(2600, this.mapper.countAll(Book.class, true));
-	//
-	// QueryExpression expression = new QueryExpression(
-	// new Condition("itemName()", ComparisonOperator.IsNotNull, null));
-	// expression.setLimit(2500);
-	// expression.setSort(new Sort("itemName()"));
-	//
-	// List<Book> fetchedBooks = this.mapper.query(Book.class, expression,
-	// true);
-	// if (this.mapper.hasNext()) {
-	// fetchedBooks.addAll(this.mapper.query(Book.class, expression, true));
-	// }
-	//
-	// List<Long> itemNameList = new ArrayList<Long>();
-	// for (Book book : fetchedBooks) {
-	// itemNameList.add(book.id);
-	// }
-	// Collections.sort(itemNameList);
-	// assertEquals(2600, itemNameList.size());
-	// Long expectedItemName = 0L;
-	// for (Long itemName : itemNameList) {
-	// assertEquals(expectedItemName, itemName);
-	// expectedItemName += 1;
-	// }
-	// }
+//	@Test
+//	public void testManyBooks() throws Exception {
+//		// List<Book> manyBooks = new ArrayList<Book>();
+//		// for (int i = 0; i < 2600; i++) {
+//		// Book book = newBook1((long) i);
+//		// book.price += i;
+//		// manyBooks.add(book);
+//		// this.mapper.save(book);
+//		// }
+//
+//		assertEquals(2600, this.mapper.countAll(Book.class, true));
+//
+//		QueryExpression expression = new QueryExpression(
+//				new Condition("itemName()", ComparisonOperator.IsNotNull, null));
+//		expression.setLimit(2500);
+//		expression.setSort(new Sort("itemName()"));
+//
+//		List<Book> fetchedBooks = this.mapper.query(Book.class, expression, true);
+//		while (this.mapper.hasNext()) {
+//			fetchedBooks.addAll(this.mapper.query(Book.class, expression, true));
+//		}
+//
+//		List<Long> itemNameList = new ArrayList<Long>();
+//		for (Book book : fetchedBooks) {
+//			itemNameList.add(book.id);
+//		}
+//		Collections.sort(itemNameList);
+//		assertEquals(2600, itemNameList.size());
+//		Long expectedItemName = 0L;
+//		for (Long itemName : itemNameList) {
+//			assertEquals(expectedItemName, itemName);
+//			expectedItemName += 1;
+//		}
+//	}
 
 	private void assertBook(Book book, Book fetchedBook) {
 		assertEquals(book.id, fetchedBook.id);

@@ -198,7 +198,7 @@ queryを投げた際に、さらに残りのアイテムがある場合は、Sim
 
 ```java
 List<Book> books = mapper.query(Book.class, expression, true);
-if (mapper.hasNext()) {
+while (mapper.hasNext()) {
 	books.addAll(Book.class, expression, true);
 }
 ```
