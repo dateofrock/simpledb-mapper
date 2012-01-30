@@ -31,6 +31,7 @@ Usage
 始めに、SimpleDBにドメインを作成します。simpledb-mapperにはドメイン作成機能はありません。AWS Management Consoleを利用するか、APIを利用してあらかじめドメインを作成しておいてください。
 
 SimpleDBに永続化したいモデルをPOJOとして表現し、そこにsimpledb-mapperが用意してあるアノテーションを付け加えます。以下、サンプルとしてBookというPOJOを例に解説します。
+
 ```java
 @SimpleDBEntity(domainName = "SimpleDBMapper-Book-Testing")
 public class Book {
