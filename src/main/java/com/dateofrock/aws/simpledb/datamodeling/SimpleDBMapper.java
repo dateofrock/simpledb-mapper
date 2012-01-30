@@ -1,3 +1,18 @@
+/*
+ *	Copyright 2012 Takehito Tanabe (dateofrock at gmail dot com)
+ *
+ *	Licensed under the Apache License, Version 2.0 (the "License");
+ *	you may not use this file except in compliance with the License.
+ *	You may obtain a copy of the License at
+ *
+ *	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *	Unless required by applicable law or agreed to in writing, software
+ *	distributed under the License is distributed on an "AS IS" BASIS,
+ *	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	See the License for the specific language governing permissions and
+ *	limitations under the License.
+ */
 package com.dateofrock.aws.simpledb.datamodeling;
 
 import java.lang.reflect.Field;
@@ -337,27 +352,6 @@ public class SimpleDBMapper {
 	}
 
 	/**
-	 * selectを実行します。戻り値は最大100アイテムです。
-	 * 
-	 * <a href=
-	 * "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/UsingSelect.html"
-	 * >AWSドキュメント参照</a>
-	 * 
-	 * @param clazz
-	 *            {@link SimpleDBEntity}アノテーションがついたPOJO
-	 * @param expression
-	 *            where文
-	 * @param consistentRead
-	 *            一貫性読み込みオプション。 <a href=
-	 *            "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/ConsistencySummary.html"
-	 *            >AWSドキュメント参照</a>
-	 * @return 0件の場合は空のListが返ってきます。
-	 */
-	public <T> List<T> query(Class<T> clazz, QueryExpression expression, boolean consistentRead) {
-		return query(clazz, expression, consistentRead, 100);
-	}
-
-	/**
 	 * selectを実行します。
 	 * 
 	 * <a href=
@@ -374,14 +368,11 @@ public class SimpleDBMapper {
 	 *            <a href=
 	 *            "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/ConsistencySummary.html"
 	 *            >AWSドキュメント参照</a>
-	 * @param limit
-	 *            戻り値の最大数。SimpleDBの制限より設定できる最大値は2500（
-	 *            {@link SimpleDBEntity#MAX_QUERY_LIMIT}）になります。
 	 * @return 0件の場合は空のListが返ってきます。
 	 */
-	public <T> List<T> query(Class<T> clazz, QueryExpression expression, boolean consistentRead, int limit) {
+	public <T> List<T> query(Class<T> clazz, QueryExpression expression, boolean consistentRead) {
 		String whereExpression = expression.whereExpressionString();
-		String query = createQuery(clazz, false, whereExpression, limit);
+		String query = createQuery(clazz, false, whereExpression, expression.getLimit());
 
 		List<T> objects = fetch(clazz, query, consistentRead);
 		return objects;
@@ -413,11 +404,19 @@ public class SimpleDBMapper {
 		return objects.get(0);
 	}
 
+	public boolean hasNext() {
+		if (this.selectNextToken != null) {
+			return true;
+		}
+		return false;
+	}
+
 	private <T> List<T> fetch(Class<T> clazz, String query, boolean consistentRead) {
 		SelectRequest selectRequest = new SelectRequest(query.toString(), consistentRead);
 		// TODO nextTokenの保持の仕方
 		if (this.selectNextToken != null) {
 			selectRequest.setNextToken(this.selectNextToken);
+			this.selectNextToken = null;
 		}
 		SelectResult result = this.sdb.select(selectRequest);
 		List<Item> items = result.getItems();
