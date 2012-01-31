@@ -89,12 +89,15 @@ attributeとして指定できる型は以下に制約されます。
 * java.lang.Float
 * java.lang.Long
 * java.util.Date
-* java.util.Set<java.lang.String>
-* java.util.Set<java.lang.Integer>
-* java.util.Set<java.lang.Float>
-* java.util.Set<java.lang.Long>
-* java.util.Set<java.util.Date>
+* java.util.Set&lt;java.lang.String&gt;
+* java.util.Set&lt;java.lang.Integer&gt;
+* java.util.Set&lt;java.lang.Float&gt;
+* java.util.Set&lt;java.lang.Long&gt;
+* java.util.Set&lt;java.util.Date&gt;
 
+
+###@SimpleDBBlob
+//執筆中
 
 ###@SimpleDBVersionAttribute
 @SimpleDBVersionAttributeアノテーションで指定されたpublicフィールドは、SimpleDBにアイテムをPUT/DELETEする際にトランザクション制御（楽観的ロック）を実現するためのフィールドになります。このフィールドはsimpledb-mapperが内部的に使用するものです。この指定は必須ではありません。
@@ -224,13 +227,13 @@ count = mapper.count(Book.class, expression, true);
 Limitation
 ==============
 
-* @SimpleDBAttributeアノテーションはフィールドにのみ指定できます。Javaで一般的なgetter/setterメソッドには非対応です。
+* @SimpleDBAttributeアノテーションはフィールドにのみ指定できます。
 * @SimpleDBItemNameの自動発行機能（リレーショナルデータベースで一般的なAUTO INCREMENTやSERIAL的な自動採番機能）はありません。
 * BatchPutAttribute/BatchDeleteAttributeはサポートされていません。
-* Integer/Float/Doubleにて、負の値はサポートされていません。
-* 比較演算子between、in、everyはサポートされていません。（参考：[SimpleDB Developer Guide: Comparison Operators](http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/UsingSelectOperators.html)）
 * データセットパーティショニング（ドメイン分割／シャーディング）機能はサポートされていません。（参考：[SimpleDB Developer Guide: Data Set Partitioning](http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/DataSetPartitioning.html)）
-* エラーメッセージなどが国際化（英語化）されていません。
+* Integer/Float/Doubleにて、負の値はサポートされていません。(Issue: https://github.com/dateofrock/simpledb-mapper/issues/1)
+* エラーメッセージなどが国際化（英語化）されていません。(Issue: https://github.com/dateofrock/simpledb-mapper/issues/2)
+* 比較演算子between、in、everyはサポートされていません。(Issue: https://github.com/dateofrock/simpledb-mapper/issues/3)（参考：[SimpleDB Developer Guide: Comparison Operators](http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/UsingSelectOperators.html)）
 
 
 Licence
