@@ -13,27 +13,19 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling;
+package com.dateofrock.simpledbmapper;
 
 /**
- * simpledb-mapperの一般的な実行時例外です。
+ * 検索した際にあるべきアイテムが見つからなかったときにスローされる例外です。
  * 
- * @author dateofrock
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-public class SimpleDBMappingException extends RuntimeException {
+public class SimpleDBMapperNotFoundException extends Exception {
 
-	private static final long serialVersionUID = 6240920032845919234L;
+	private static final long serialVersionUID = -9009958880838731912L;
 
-	public SimpleDBMappingException(String message) {
+	public SimpleDBMapperNotFoundException(String message) {
 		super(message);
-	}
-
-	public SimpleDBMappingException(String message, Exception e) {
-		super(message, e);
-	}
-
-	public SimpleDBMappingException(Exception e) {
-		super(e);
 	}
 
 }

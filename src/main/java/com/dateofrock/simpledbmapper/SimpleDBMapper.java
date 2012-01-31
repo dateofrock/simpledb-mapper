@@ -13,9 +13,12 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling;
+package com.dateofrock.simpledbmapper;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,10 +27,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.simpledb.AmazonSimpleDB;
 import com.amazonaws.services.simpledb.model.Attribute;
 import com.amazonaws.services.simpledb.model.DeleteAttributesRequest;
+import com.amazonaws.services.simpledb.model.GetAttributesRequest;
+import com.amazonaws.services.simpledb.model.GetAttributesResult;
 import com.amazonaws.services.simpledb.model.Item;
 import com.amazonaws.services.simpledb.model.PutAttributesRequest;
 import com.amazonaws.services.simpledb.model.ReplaceableAttribute;
@@ -35,99 +44,28 @@ import com.amazonaws.services.simpledb.model.SelectRequest;
 import com.amazonaws.services.simpledb.model.SelectResult;
 import com.amazonaws.services.simpledb.model.UpdateCondition;
 import com.amazonaws.services.simpledb.util.SimpleDBUtils;
-import com.dateofrock.aws.simpledb.datamodeling.query.QueryExpression;
+import com.dateofrock.simpledbmapper.query.QueryExpression;
+import com.dateofrock.simpledbmapper.s3.S3BlobReference;
+import com.dateofrock.simpledbmapper.s3.S3Task;
+import com.dateofrock.simpledbmapper.s3.S3TaskResult;
+import com.dateofrock.simpledbmapper.s3.S3TaskResult.Operation;
 
 /**
- * SimpleDBのデータマッパーです。
+ * SimpleDBのデータマッパー
  * 
- * <pre>
- * &#064;SimpleDBEntity(domainName = &quot;SimpleDBMapper-Book-Testing&quot;)
- * public class Book {
- * 
- * 	&#064;SimpleDBItemName
- * 	public Long id;
- * 
- * 	&#064;SimpleDBAttribute(attributeName = &quot;title&quot;)
- * 	public String title;
- * 
- * 	&#064;SimpleDBAttribute(attributeName = &quot;isbn&quot;)
- * 	public String isbn;
- * 
- * 	&#064;SimpleDBAttribute(attributeName = &quot;authors&quot;)
- * 	public Set&lt;String&gt; authors;
- * 
- * 	&#064;SimpleDBAttribute(attributeName = &quot;publishedAt&quot;)
- * 	public Date publishedAt;
- * 
- * 	&#064;SimpleDBAttribute(attributeName = &quot;price&quot;)
- * 	public Integer price;
- * 
- * 	&#064;SimpleDBAttribute(attributeName = &quot;height&quot;)
- * 	public Float height;
- * 
- * 	&#064;SimpleDBAttribute(attributeName = &quot;width&quot;)
- * 	public Float width;
- * 
- * 	&#064;SimpleDBAttribute(attributeName = &quot;available&quot;)
- * 	public boolean available;
- * 
- * 	&#064;SimpleDBVersionAttribute
- * 	public Long version;
- * 
- * }
- * </pre>
- * 
- * <pre>
- * AWSCredentials cred = new PropertiesCredentials(
- * 		SimpleDBMapperTest.class.getResourceAsStream(&quot;/AwsCredentials.properties&quot;));
- * AmazonSimpleDB sdb = new AmazonSimpleDBClient(cred);
- * sdb.setEndpoint(&quot;sdb.ap-northeast-1.amazonaws.com&quot;);
- * 
- * SimpleDBMapper mapper = new SimpleDBMapper(sdb);
- * 
- * Book book1 = new Book();
- * book1.id = 123L;
- * book1.title = &quot;面白い本&quot;;
- * book1.authors = new HashSet&lt;String&gt;();
- * book1.authors.add(&quot;著者A&quot;);
- * book1.authors.add(&quot;著者B&quot;);
- * book1.price = 1280;
- * book1.publishedAt = toDate(&quot;2012-1-20 00:00:00&quot;);
- * book1.isbn = &quot;1234567890&quot;;
- * book1.width = 18.2f;
- * book1.height = 25.6f;
- * book1.available = true;
- * 
- * mapper.save(book1);
- * 
- * book1.authors.remove(&quot;著者A&quot;);
- * mapper.save(book1);
- * Book fetchedBook = mapper.load(Book.class, book1.id, true);
- * 
- * SimpleDBQueryExpression expression = new SimpleDBQueryExpression(new Condition(&quot;title&quot;, ComparisonOperator.Equals,
- * 		&quot;すごい本&quot;));
- * int count = mapper.count(Book.class, expression, true);
- * 
- * expression = new SimpleDBQueryExpression(new Condition(&quot;title&quot;, ComparisonOperator.Like, &quot;%本&quot;));
- * Sort sort = new Sort(&quot;title&quot;);
- * expression.setSort(sort);
- * 
- * List&lt;Book&gt; books = this.mapper.query(Book.class, expression, true);
- * 
- * mapper.delete(book1);
- * count = mapper.countAll(Book.class, true);
- * </pre>
- * 
- * @author dateofrock
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
 public class SimpleDBMapper {
 
+	private static final int S3_UPLOAD_THREAD_POOL_SIZE = 3; // TODO
 	private AmazonSimpleDB sdb;
+	private AmazonS3 s3;
 	private Refrector refrector;
 	private String selectNextToken;
 
-	public SimpleDBMapper(AmazonSimpleDB sdb) {
+	public SimpleDBMapper(AmazonSimpleDB sdb, AmazonS3 s3) {
 		this.sdb = sdb;
+		this.s3 = s3;
 		this.refrector = new Refrector();
 	}
 
@@ -153,61 +91,115 @@ public class SimpleDBMapper {
 		String itemName = null;
 		itemName = this.refrector.getItemNameAsSimpleDBFormat(object, itemNameField);
 
-		Field[] fields = clazz.getFields();
-		Map<String, Object> valuesMap = new HashMap<String, Object>();
+		Field[] fields = clazz.getDeclaredFields();
+		Map<String, Object> attributeMap = new HashMap<String, Object>();
+		List<S3BlobReference> blobList = new ArrayList<S3BlobReference>();
 		for (Field field : fields) {
-			SimpleDBAttribute attr = field.getAnnotation(SimpleDBAttribute.class);
-			if (attr != null) {
-				try {
-					valuesMap.put(attr.attributeName(), field.get(object));
-				} catch (Exception e) {
-					throw new SimpleDBMappingException(e);
+			try {
+				SimpleDBAttribute attr = field.getAnnotation(SimpleDBAttribute.class);
+				if (attr != null) {
+					attributeMap.put(attr.attributeName(), field.get(object));
 				}
+				SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
+				if (blob != null) {
+					S3BlobReference s3BlobRef = new S3BlobReference(blob.attributeName(), blob.s3BucketName(),
+							blob.prefix(), field.get(object));
+					blobList.add(s3BlobRef);
+				}
+			} catch (Exception e) {
+				throw new SimpleDBMappingException(e);
 			}
 		}
 
 		List<String> nullKeys = new ArrayList<String>();
-		List<ReplaceableAttribute> attrs = new ArrayList<ReplaceableAttribute>();
-		for (Map.Entry<String, Object> entry : valuesMap.entrySet()) {
-			Object value = entry.getValue();
-			if (value == null) {
-				nullKeys.add(entry.getKey());// 削除対象キーリストに追加
-			} else if (value instanceof Set) { // Set
-				Set<?> c = (Set<?>) value;
+		List<ReplaceableAttribute> replacableAttrs = new ArrayList<ReplaceableAttribute>();
+
+		// SimpleDBAttribute
+		for (Map.Entry<String, Object> entry : attributeMap.entrySet()) {
+			String sdbAttributeName = entry.getKey();
+			Object sdbValue = entry.getValue();
+			if (sdbValue == null) {
+				nullKeys.add(sdbAttributeName);// 削除対象キーリストに追加
+			} else if (sdbValue instanceof Set) { // Set
+				Set<?> c = (Set<?>) sdbValue;
 				for (Object val : c) {
 					if (val instanceof Integer) {
-						attrs.add(new ReplaceableAttribute(entry.getKey(), SimpleDBUtils.encodeZeroPadding(
+						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
 								(Integer) val, SimpleDBEntity.MAX_NUMBER_DIGITS), true));
 					} else if (val instanceof Float) {
-						attrs.add(new ReplaceableAttribute(entry.getKey(), SimpleDBUtils.encodeZeroPadding((Float) val,
-								SimpleDBEntity.MAX_NUMBER_DIGITS), true));
+						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
+								(Float) val, SimpleDBEntity.MAX_NUMBER_DIGITS), true));
 					} else if (val instanceof Long) {
-						attrs.add(new ReplaceableAttribute(entry.getKey(), SimpleDBUtils.encodeZeroPadding((Long) val,
-								SimpleDBEntity.MAX_NUMBER_DIGITS), true));
+						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
+								(Long) val, SimpleDBEntity.MAX_NUMBER_DIGITS), true));
 					} else if (val instanceof String) {
-						attrs.add(new ReplaceableAttribute(entry.getKey(), (String) val, true));
+						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, (String) val, true));
 					}
 				}
-			} else if (value instanceof Date) {// Date
-				Date d = (Date) value;
-				attrs.add(new ReplaceableAttribute(entry.getKey(), SimpleDBUtils.encodeDate(d), true));
-			} else if (value instanceof Integer) {// Integer or int
-				attrs.add(new ReplaceableAttribute(entry.getKey(), SimpleDBUtils.encodeZeroPadding((Integer) value,
-						SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
-			} else if (value instanceof Float) {// Float or float
-				attrs.add(new ReplaceableAttribute(entry.getKey(), SimpleDBUtils.encodeZeroPadding((Float) value,
-						SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
-			} else if (value instanceof Long) {// Long or long
-				attrs.add(new ReplaceableAttribute(entry.getKey(), SimpleDBUtils.encodeZeroPadding((Long) value,
-						SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
-			} else if (value instanceof String) {// String
-				attrs.add(new ReplaceableAttribute(entry.getKey(), (String) value, true));
-			} else if (value instanceof Boolean) {// Boolean or boolean
-				Boolean b = (Boolean) value;
-				attrs.add(new ReplaceableAttribute(entry.getKey(), String.valueOf(b), true));
+			} else if (sdbValue instanceof Date) {// Date
+				Date d = (Date) sdbValue;
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeDate(d), true));
+			} else if (sdbValue instanceof Integer) {// Integer or int
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
+						(Integer) sdbValue, SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
+			} else if (sdbValue instanceof Float) {// Float or float
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
+						(Float) sdbValue, SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
+			} else if (sdbValue instanceof Long) {// Long or long
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
+						(Long) sdbValue, SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
+			} else if (sdbValue instanceof String) {// String
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, (String) sdbValue, true));
+			} else if (sdbValue instanceof Boolean) {// Boolean or boolean
+				Boolean b = (Boolean) sdbValue;
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, String.valueOf(b), true));
 			} else {
-				throw new SimpleDBMappingException("フィールド: " + entry.getKey() + " はサポート対象外の型です。"
-						+ entry.getKey().getClass());
+				throw new SimpleDBMappingException("フィールド: " + sdbAttributeName + " はサポート対象外の型です。"
+						+ sdbAttributeName.getClass());
+			}
+		}
+
+		// SimpleDBBlob
+		List<S3Task> uploadTasks = new ArrayList<S3Task>();
+		for (S3BlobReference s3BlobRef : blobList) {
+			String bucketName = s3BlobRef.getS3BucketName();
+			if (bucketName == null) {
+				throw new SimpleDBMappingException("Blobにはs3BucketNameの指定が必須です");
+			}
+
+			StringBuilder s3Key = new StringBuilder();
+			String prefix = s3BlobRef.getPrefix();
+			if (prefix == null) {
+				throw new SimpleDBMappingException("Blobのprefixにnullは指定できません");
+			}
+			prefix = prefix.trim();
+			s3Key.append(prefix);
+			if (!prefix.endsWith("/")) {
+				s3Key.append("/");
+			}
+			s3Key.append(itemName).append("/").append(s3BlobRef.getAttributeName());
+
+			Object blobObject = s3BlobRef.getObject();
+			if (blobObject == null) {
+				nullKeys.add(s3BlobRef.getAttributeName());
+				// その都度Delete Objectする
+				// FIXME このタイミングがベストではない。ベストはSDBに対してDeleteAttributeする直後。
+				this.s3.deleteObject(bucketName, s3Key.toString());
+			} else {
+				InputStream input = null;
+				if (blobObject instanceof String) {
+					// BlobがString
+					// FIXME encoding決めうち
+					input = new ByteArrayInputStream(((String) blobObject).getBytes(Charset.forName("UTF-8")));
+				} else if (blobObject.getClass().getSimpleName().equals("byte[]")) {
+					// BlobがByte配列
+					input = new ByteArrayInputStream((byte[]) blobObject);
+				} else {
+					throw new SimpleDBMappingException("Blobに指定できるクラスはStringもしくはbyte[]のみです");
+				}
+				S3Task uploadTask = new S3Task(this.s3, s3BlobRef.getAttributeName(), input, bucketName,
+						s3Key.toString());
+				uploadTasks.add(uploadTask);
 			}
 		}
 
@@ -235,13 +227,38 @@ public class SimpleDBMapper {
 					}
 				}
 
-				attrs.add(new ReplaceableAttribute(versionAttributeName, nowVersion.toString(), true));
+				replacableAttrs.add(new ReplaceableAttribute(versionAttributeName, nowVersion.toString(), true));
 			} catch (Exception e) {
 				throw new SimpleDBMappingException("objectからversion取得に失敗: " + object, e);
 			}
 		}
 
-		req.setAttributes(attrs);
+		// S3にアップロード処理
+		List<S3TaskResult> taskFailures = new ArrayList<S3TaskResult>();
+		ExecutorService executor = Executors.newFixedThreadPool(S3_UPLOAD_THREAD_POOL_SIZE);
+		try {
+			List<Future<S3TaskResult>> futures = executor.invokeAll(uploadTasks);
+			for (Future<S3TaskResult> future : futures) {
+				S3TaskResult result = future.get();
+				// SimpleDBに結果を書き込み
+				replacableAttrs.add(new ReplaceableAttribute(result.getSimpleDBAttributeName(), result
+						.toSimpleDBAttributeValue(), true));
+				if (!result.isSuccess()) {
+					// Upload失敗
+					taskFailures.add(result);
+				}
+			}
+		} catch (Exception e) {
+			throw new SimpleDBMapperS3HandleException("S3アップロード操作に失敗", e);
+		}
+
+		// UploadTask失敗があれば例外をスロー
+		if (!taskFailures.isEmpty()) {
+			throw new SimpleDBMapperS3HandleException(taskFailures);
+		}
+
+		// SDBにPUT
+		req.setAttributes(replacableAttrs);
 		this.sdb.putAttributes(req);
 
 		// versionをセット
@@ -283,8 +300,24 @@ public class SimpleDBMapper {
 		Field itemNameField = this.refrector.findItemNameField(object.getClass());
 		String itemName = this.refrector.getItemNameAsSimpleDBFormat(object, itemNameField);
 
-		DeleteAttributesRequest req = new DeleteAttributesRequest(domainName, itemName);
+		// S3 Blob削除対象をリストアップ
+		GetAttributesResult results = this.sdb.getAttributes(new GetAttributesRequest(domainName, itemName));
+		List<Attribute> sdbAllAttrs = results.getAttributes();
+		List<Field> blobFields = this.refrector.findBlobFields(object.getClass());
+		List<S3TaskResult> s3TaskResults = new ArrayList<S3TaskResult>();
+		for (Field field : blobFields) {
+			SimpleDBBlob blobAnnon = field.getAnnotation(SimpleDBBlob.class);
+			String attributeName = blobAnnon.attributeName();
+			for (Attribute attr : sdbAllAttrs) {
+				if (attr.getName().equals(attributeName)) {
+					S3TaskResult taskResult = new S3TaskResult(Operation.DELETE, attributeName, null, null);
+					taskResult.setSimpleDBAttributeValue(attr.getValue());
+					s3TaskResults.add(taskResult);
+				}
+			}
+		}
 
+		DeleteAttributesRequest req = new DeleteAttributesRequest(domainName, itemName);
 		// versionが入っていたらConditional Delete
 		Field versionField = this.refrector.findVersionAttributeField(object.getClass());
 		if (versionField != null) {
@@ -306,8 +339,12 @@ public class SimpleDBMapper {
 				throw new SimpleDBMappingException("objectからversion取得に失敗: " + object, e);
 			}
 		}
-
 		this.sdb.deleteAttributes(req);
+
+		// S3削除
+		for (S3TaskResult s3TaskResult : s3TaskResults) {
+			this.s3.deleteObject(s3TaskResult.getBucketName(), s3TaskResult.getKey());
+		}
 	}
 
 	/**
@@ -460,7 +497,7 @@ public class SimpleDBMapper {
 			// itemのattributesでループ
 			List<Attribute> attrs = item.getAttributes();
 			for (Attribute attr : attrs) {
-				this.refrector.setFieldValueByAttribute(clazz, instance, attr);
+				this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
 			}
 
 			objects.add(instance);

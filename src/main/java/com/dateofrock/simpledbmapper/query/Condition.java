@@ -13,18 +13,18 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling.query;
+package com.dateofrock.simpledbmapper.query;
 
 import java.util.Date;
 
 import com.amazonaws.services.simpledb.util.SimpleDBUtils;
-import com.dateofrock.aws.simpledb.datamodeling.SimpleDBEntity;
-import com.dateofrock.aws.simpledb.datamodeling.SimpleDBMappingException;
+import com.dateofrock.simpledbmapper.SimpleDBEntity;
+import com.dateofrock.simpledbmapper.SimpleDBMappingException;
 
 /**
  * 条件文
  * 
- * @author dateofrock
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
 public class Condition {
 

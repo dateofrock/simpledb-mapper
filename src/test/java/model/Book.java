@@ -18,10 +18,11 @@ package model;
 import java.util.Date;
 import java.util.Set;
 
-import com.dateofrock.aws.simpledb.datamodeling.SimpleDBAttribute;
-import com.dateofrock.aws.simpledb.datamodeling.SimpleDBEntity;
-import com.dateofrock.aws.simpledb.datamodeling.SimpleDBItemName;
-import com.dateofrock.aws.simpledb.datamodeling.SimpleDBVersionAttribute;
+import com.dateofrock.simpledbmapper.SimpleDBAttribute;
+import com.dateofrock.simpledbmapper.SimpleDBBlob;
+import com.dateofrock.simpledbmapper.SimpleDBEntity;
+import com.dateofrock.simpledbmapper.SimpleDBItemName;
+import com.dateofrock.simpledbmapper.SimpleDBVersionAttribute;
 
 /**
  * テスト用モデル
@@ -57,6 +58,12 @@ public class Book {
 
 	@SimpleDBAttribute(attributeName = "available")
 	public boolean available;
+
+	@SimpleDBBlob(attributeName = "review", s3BucketName = "simpledbmapper-book-testing", prefix = "review/")
+	public String review;
+
+	@SimpleDBBlob(attributeName = "coverImage", s3BucketName = "simpledbmapper-book-testing", prefix = "coverImage/")
+	public byte[] coverImage;
 
 	@SimpleDBVersionAttribute
 	public Long version;

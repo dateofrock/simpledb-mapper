@@ -13,27 +13,38 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling;
+package com.dateofrock.simpledbmapper;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.simpledb.model.Attribute;
 import com.amazonaws.services.simpledb.util.SimpleDBUtils;
+import com.dateofrock.simpledbmapper.s3.S3TaskResult;
+import com.dateofrock.simpledbmapper.s3.S3TaskResult.Operation;
 
 /**
  * {@link SimpleDBMapper}のためのリフレクションユーティリティ。
  * 
- * @author dateofrock
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
 class Refrector {
 
-	<T> Field findItemNameField(Class<T> clazz) {
-		Field[] fields = clazz.getFields();
+	Field findItemNameField(Class<?> clazz) {
+		Field[] fields = clazz.getDeclaredFields();
 		for (Field field : fields) {
 			SimpleDBItemName sdbItemName = field.getAnnotation(SimpleDBItemName.class);
 			if (sdbItemName != null) {
@@ -43,8 +54,8 @@ class Refrector {
 		return null;
 	}
 
-	<T> Field findVersionAttributeField(Class<T> clazz) {
-		Field[] fields = clazz.getFields();
+	Field findVersionAttributeField(Class<?> clazz) {
+		Field[] fields = clazz.getDeclaredFields();
 		for (Field field : fields) {
 			SimpleDBVersionAttribute versionAttribute = field.getAnnotation(SimpleDBVersionAttribute.class);
 			if (versionAttribute != null) {
@@ -54,7 +65,38 @@ class Refrector {
 		return null;
 	}
 
-	<T> void setFieldValueByAttribute(Class<T> clazz, T instance, Attribute attribute) {
+	List<Field> findBlobFields(Class<?> clazz) {
+		List<Field> list = new ArrayList<Field>();
+		Field[] fields = clazz.getDeclaredFields();
+		for (Field field : fields) {
+			SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
+			if (blob != null) {
+				list.add(field);
+			}
+		}
+		return list;
+	}
+
+	String findDomainName(Class<?> clazz) {
+		SimpleDBEntity entity = clazz.getAnnotation(SimpleDBEntity.class);
+		if (entity == null) {
+			throw new SimpleDBMappingException(clazz + "は@SimpleDBEntityアノテーションがありません");
+		}
+		return entity.domainName();
+	}
+
+	String findVersionAttributeName(Class<?> clazz) {
+		Field[] fields = clazz.getFields();
+		for (Field field : fields) {
+			SimpleDBVersionAttribute versionAttribute = field.getAnnotation(SimpleDBVersionAttribute.class);
+			if (versionAttribute != null) {
+				return versionAttribute.attributeName();
+			}
+		}
+		throw new SimpleDBMappingException(clazz + "は@SimpleDBVersionAttributeアノテーションがありません");
+	}
+
+	<T> void setFieldValueByAttribute(AmazonS3 s3, Class<T> clazz, T instance, Attribute attribute) {
 		String attributeName = attribute.getName();
 		String attributeValue = attribute.getValue();
 
@@ -70,10 +112,10 @@ class Refrector {
 			return;
 		}
 
-		Field[] fields = clazz.getFields();
+		Field[] fields = clazz.getDeclaredFields();
 		for (Field field : fields) {
 			try {
-				setFieldValue(instance, field, attributeName, attributeValue);
+				setFieldValue(s3, instance, field, attributeName, attributeValue);
 			} catch (Exception e) {
 				throw new SimpleDBMappingException("fieldのセットに失敗", e);
 			}
@@ -82,17 +124,14 @@ class Refrector {
 	}
 
 	@SuppressWarnings("unchecked")
-	private <T> void setFieldValue(T instance, Field field, String attributeName, String attributeValue)
+	private <T> void setFieldValue(AmazonS3 s3, T instance, Field field, String attributeName, String attributeValue)
 			throws IllegalAccessException, ParseException {
 		Class<?> type;
 		type = field.getType();
 
-		// attributes
-		SimpleDBAttribute sdbAttributeAnnotation = field.getAnnotation(SimpleDBAttribute.class);
-		if (sdbAttributeAnnotation == null) {
-			return;
-		}
-		if (sdbAttributeAnnotation.attributeName().equals(attributeName)) {
+		// SimpleDBAttribute
+		SimpleDBAttribute sdbAttrAnnotation = field.getAnnotation(SimpleDBAttribute.class);
+		if (sdbAttrAnnotation != null && sdbAttrAnnotation.attributeName().equals(attributeName)) {
 			if (Set.class.isAssignableFrom(type)) {
 				// Set
 				Set<?> s = (Set<?>) field.get(instance);
@@ -151,6 +190,59 @@ class Refrector {
 				throw new SimpleDBMappingException("サポートしていない型です。" + type);
 			}
 		}
+
+		// SimpleDBBlob
+		SimpleDBBlob sdbBlobAnnotation = field.getAnnotation(SimpleDBBlob.class);
+		if (sdbBlobAnnotation != null && sdbBlobAnnotation.attributeName().equals(attributeName)) {
+			S3TaskResult taskResult = new S3TaskResult(Operation.DOWNLOAD, attributeName, null, null);
+			taskResult.setSimpleDBAttributeValue(attributeValue);
+			S3Object s3Obj = s3.getObject(taskResult.getBucketName(), taskResult.getKey());
+			InputStream input = s3Obj.getObjectContent();
+			if (isStringType(type)) {
+				// FIXME encoding決めうち
+				InputStreamReader reader = null;
+				StringWriter writer = null;
+				try {
+					reader = new InputStreamReader(input, "UTF-8");
+					writer = new StringWriter();
+					int c;
+					while ((c = reader.read()) != -1) {
+						writer.write(c);
+					}
+					writer.flush();
+					String stringValue = writer.toString();
+					field.set(instance, stringValue);
+				} catch (IOException e) {
+					throw new SimpleDBMapperS3HandleException("S3よりオブジェクト読み込み失敗(String)", e);
+				} finally {
+					try {
+						reader.close();
+						writer.close();
+					} catch (Exception ignore) {
+					}
+				}
+
+			} else if (isPrimitiveByteArrayType(type)) {
+				ByteArrayOutputStream out = new ByteArrayOutputStream();
+				int c;
+				try {
+					while ((c = input.read()) != -1) {
+						out.write(c);
+					}
+					out.flush();
+					byte[] bytes = out.toByteArray();
+					field.set(instance, bytes);
+				} catch (IOException e) {
+					throw new SimpleDBMapperS3HandleException("S3よりオブジェクト読み込み失敗(byte[])", e);
+				} finally {
+					try {
+						out.close();
+					} catch (IOException ignore) {
+					}
+				}
+
+			}
+		}
 	}
 
 	String formattedString(Object object) {
@@ -193,25 +285,6 @@ class Refrector {
 		return itemName;
 	}
 
-	<T> String findDomainName(Class<T> clazz) {
-		SimpleDBEntity entity = clazz.getAnnotation(SimpleDBEntity.class);
-		if (entity == null) {
-			throw new SimpleDBMappingException(clazz + "は@SimpleDBEntityアノテーションがありません");
-		}
-		return entity.domainName();
-	}
-
-	<T> String findVersionAttributeName(Class<T> clazz) {
-		Field[] fields = clazz.getFields();
-		for (Field field : fields) {
-			SimpleDBVersionAttribute versionAttribute = field.getAnnotation(SimpleDBVersionAttribute.class);
-			if (versionAttribute != null) {
-				return versionAttribute.attributeName();
-			}
-		}
-		throw new SimpleDBMappingException(clazz + "は@SimpleDBVersionAttributeアノテーションがありません");
-	}
-
 	boolean isDateType(Class<?> type) {
 		return Date.class.isAssignableFrom(type);
 	}
@@ -234,6 +307,10 @@ class Refrector {
 
 	boolean isIntegerType(Class<?> type) {
 		return Integer.class.isAssignableFrom(type) || int.class.isAssignableFrom(type);
+	}
+
+	boolean isPrimitiveByteArrayType(Class<?> type) {
+		return type.getSimpleName().equals("byte[]");
 	}
 
 }

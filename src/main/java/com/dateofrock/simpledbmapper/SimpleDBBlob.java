@@ -13,7 +13,7 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling;
+package com.dateofrock.simpledbmapper;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -21,24 +21,30 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * SimpleDBのドメインとひも付けるためのアノテーションです。
+ * Blobのためのアノテーション（SimpleDBでは1024byte以上が扱えないので、それを超えるデータを保存したい場合）
  * 
- * @author dateofrock
+ * 指定できるクラスは以下です。
+ * <ul>
+ * <li>{@link java.lang.String}</li>
+ * <li>byte[]</li>
+ * </ul>
+ * 
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface SimpleDBEntity {
+@Target(ElementType.FIELD)
+public @interface SimpleDBBlob {
 
-	public static final int MAX_NUMBER_DIGITS = 10;
+	String attributeName();
 
 	/**
-	 * Maximum items in Select response
-	 * 
-	 * <a href=
-	 * "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/SDBLimits.html"
-	 * >AWSドキュメント参照</a>
+	 * データを保存したいバケット名
 	 */
-	public static final int MAX_QUERY_LIMIT = 2500;
+	String s3BucketName();
 
-	String domainName();
+	/**
+	 * S3キーのプレフィックス
+	 */
+	String prefix() default "";
+
 }

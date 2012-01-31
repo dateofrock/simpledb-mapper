@@ -13,10 +13,27 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
+package com.dateofrock.simpledbmapper;
+
 /**
- * <a href="http://aws.amazon.com/simpledb/">Amazon SimpleDB</a>のマッパーユーティリティーです。
+ * simpledb-mapperの一般的な実行時例外です。
  * 
- * 簡易なCRUD操作が可能です。
- * 
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-package com.dateofrock.aws.simpledb.datamodeling;
+public class SimpleDBMappingException extends RuntimeException {
+
+	private static final long serialVersionUID = 6240920032845919234L;
+
+	public SimpleDBMappingException(String message) {
+		super(message);
+	}
+
+	public SimpleDBMappingException(String message, Exception e) {
+		super(message, e);
+	}
+
+	public SimpleDBMappingException(Exception e) {
+		super(e);
+	}
+
+}

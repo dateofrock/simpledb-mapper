@@ -13,24 +13,25 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling.query;
+package com.dateofrock.simpledbmapper;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
- * ソート順
+ * itemNameを指定するためのアノテーションです。
  * 
- * @author dateofrock
+ * 指定できるクラスは以下に制限されます。
+ * <ul>
+ * <li>{@link java.lang.String}</li>
+ * <li>{@link java.lang.Integer}</li>
+ * <li>{@link java.lang.Float}</li>
+ * <li>{@link java.lang.Long}</li>
+ * </ul>
+ * 
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-public enum Ordering {
+@Retention(RetentionPolicy.RUNTIME)
+public @interface SimpleDBItemName {
 
-	ASC("asc"), DESC("desc");
-
-	private String value;
-
-	private Ordering(String value) {
-		this.value = value;
-	}
-
-	public String getValue() {
-		return this.value;
-	}
 }

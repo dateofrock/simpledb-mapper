@@ -13,38 +13,24 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling.query;
+package com.dateofrock.simpledbmapper.query;
 
 /**
- * 比較演算子
+ * ソート順
  * 
- * @author dateofrock
- * @version $Revision$ $Date$
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-public enum ComparisonOperator {
+public enum Ordering {
 
-	Equals("="), NotEquals("!="), //
-
-	GreaterThan(">"), GreaterThanOrEquals(">="), //
-
-	LessThan("<"), LessThanOrEquals("<="), //
-
-	Like("like"), NotLike("not like"), //
-
-	// Between("between"), IN("in"), //
-
-	IsNull("is null"), IsNotNull("is not null"), //
-
-	// EVERY("every")//
-	;//
+	ASC("asc"), DESC("desc");
 
 	private String value;
 
-	private ComparisonOperator(String value) {
+	private Ordering(String value) {
 		this.value = value;
 	}
 
-	String getValue() {
+	public String getValue() {
 		return this.value;
 	}
 }

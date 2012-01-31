@@ -13,14 +13,14 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling.query;
+package com.dateofrock.simpledbmapper.query;
 
-import com.dateofrock.aws.simpledb.datamodeling.SimpleDBMappingException;
+import com.dateofrock.simpledbmapper.SimpleDBMappingException;
 
 /**
  * select queryのorder byを表現します。
  * 
- * @author dateofrock
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
 public class Sort {
 

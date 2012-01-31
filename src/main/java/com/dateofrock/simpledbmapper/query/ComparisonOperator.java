@@ -13,19 +13,37 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.aws.simpledb.datamodeling;
+package com.dateofrock.simpledbmapper.query;
 
 /**
- * 検索した際にあるべきアイテムが見つからなかったときにスローされる例外です。
+ * 比較演算子
  * 
- * @author dateofrock
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-public class SimpleDBMapperNotFoundException extends Exception {
+public enum ComparisonOperator {
 
-	private static final long serialVersionUID = -9009958880838731912L;
+	Equals("="), NotEquals("!="), //
 
-	public SimpleDBMapperNotFoundException(String message) {
-		super(message);
+	GreaterThan(">"), GreaterThanOrEquals(">="), //
+
+	LessThan("<"), LessThanOrEquals("<="), //
+
+	Like("like"), NotLike("not like"), //
+
+	// Between("between"), IN("in"), //
+
+	IsNull("is null"), IsNotNull("is not null"), //
+
+	// EVERY("every")//
+	;//
+
+	private String value;
+
+	private ComparisonOperator(String value) {
+		this.value = value;
 	}
 
+	String getValue() {
+		return this.value;
+	}
 }
