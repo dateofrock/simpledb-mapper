@@ -73,7 +73,7 @@ public class SimpleDBMapperTest {
 		AmazonS3 s3 = new AmazonS3Client(cred);
 		this.mapper = new SimpleDBMapper(sdb, s3);
 
-		List<Book> allBooks = this.mapper.selectAll(Book.class, true);
+		List<Book> allBooks = this.mapper.selectAll(Book.class);
 		for (Book book : allBooks) {
 			this.mapper.delete(book);
 		}
@@ -84,7 +84,7 @@ public class SimpleDBMapperTest {
 		Book book1 = newBook1(123L);
 		Book book2 = newBook2(456L);
 		this.mapper.save(book1);
-		Book fetchedBook = this.mapper.load(Book.class, book1.id, true);
+		Book fetchedBook = this.mapper.load(Book.class, book1.id);
 		assertBook(book1, fetchedBook);
 
 		String review = book1.review;
@@ -93,7 +93,7 @@ public class SimpleDBMapperTest {
 		assertArrayEquals(readBytes("/book1.cover.jpg"), coverImage);
 
 		this.mapper.save(book2);
-		fetchedBook = this.mapper.load(Book.class, book2.id, true);
+		fetchedBook = this.mapper.load(Book.class, book2.id);
 		assertBook(book2, fetchedBook);
 
 		review = book2.review;
@@ -103,18 +103,18 @@ public class SimpleDBMapperTest {
 
 		book1.authors.remove("著者A");
 		this.mapper.save(book1);
-		fetchedBook = this.mapper.load(Book.class, book1.id, true);
+		fetchedBook = this.mapper.load(Book.class, book1.id);
 		assertBook(book1, fetchedBook);
 
 		QueryExpression expression = new QueryExpression(new Condition("title", Equals, "すごい本"));
-		int count = this.mapper.count(Book.class, expression, true);
+		int count = this.mapper.count(Book.class, expression);
 		assertEquals(1, count);
 
 		expression = new QueryExpression(new Condition("title", Like, "%本"));
 		Sort sort = new Sort("title");
 		expression.setSort(sort);
 
-		List<Book> books = this.mapper.select(Book.class, expression, true);
+		List<Book> books = this.mapper.select(Book.class, expression);
 		assertBook(book1, books.get(1));
 		assertBook(book2, books.get(0));
 
@@ -122,19 +122,19 @@ public class SimpleDBMapperTest {
 		sort = new Sort("publishedAt");
 		expression.setSort(sort);
 
-		books = this.mapper.select(Book.class, expression, true);
+		books = this.mapper.select(Book.class, expression);
 		assertBook(book1, books.get(0));
 		assertBook(book2, books.get(1));
 
-		count = this.mapper.count(Book.class, expression, true);
+		count = this.mapper.count(Book.class, expression);
 		assertEquals(2, count);
 
 		this.mapper.delete(book1);
-		count = this.mapper.countAll(Book.class, true);
+		count = this.mapper.countAll(Book.class);
 		assertEquals(1, count);
 
 		this.mapper.delete(book2);
-		count = this.mapper.countAll(Book.class, true);
+		count = this.mapper.countAll(Book.class);
 		assertEquals(0, count);
 
 	}
@@ -149,16 +149,16 @@ public class SimpleDBMapperTest {
 			this.mapper.save(book);
 		}
 
-		assertEquals(10, this.mapper.countAll(Book.class, true));
+		assertEquals(10, this.mapper.countAll(Book.class));
 
 		QueryExpression expression = new QueryExpression(
 				new Condition("itemName()", ComparisonOperator.IsNotNull, null));
 		expression.setLimit(5);
 		expression.setSort(new Sort("itemName()"));
 
-		List<Book> fetchedBooks = this.mapper.select(Book.class, expression, true);
+		List<Book> fetchedBooks = this.mapper.select(Book.class, expression);
 		while (this.mapper.hasNext()) {
-			fetchedBooks.addAll(this.mapper.select(Book.class, expression, true));
+			fetchedBooks.addAll(this.mapper.select(Book.class, expression));
 		}
 
 		List<Long> itemNameList = new ArrayList<Long>();

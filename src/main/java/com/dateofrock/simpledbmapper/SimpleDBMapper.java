@@ -57,15 +57,24 @@ import com.dateofrock.simpledbmapper.s3.S3TaskResult.Operation;
  */
 public class SimpleDBMapper {
 
-	private static final int S3_UPLOAD_THREAD_POOL_SIZE = 3; // TODO
 	private AmazonSimpleDB sdb;
 	private AmazonS3 s3;
+	private SimpleDBMapperConfig config;
+
 	private Refrector refrector;
 	private String selectNextToken;
 
 	public SimpleDBMapper(AmazonSimpleDB sdb, AmazonS3 s3) {
 		this.sdb = sdb;
 		this.s3 = s3;
+		this.config = SimpleDBMapperConfig.DEFAULT;
+		this.refrector = new Refrector();
+	}
+
+	public SimpleDBMapper(AmazonSimpleDB sdb, AmazonS3 s3, SimpleDBMapperConfig config) {
+		this.sdb = sdb;
+		this.s3 = s3;
+		this.config = config;
 		this.refrector = new Refrector();
 	}
 
@@ -237,7 +246,7 @@ public class SimpleDBMapper {
 
 		// S3にアップロード処理
 		List<S3TaskResult> taskFailures = new ArrayList<S3TaskResult>();
-		ExecutorService executor = Executors.newFixedThreadPool(S3_UPLOAD_THREAD_POOL_SIZE);
+		ExecutorService executor = Executors.newFixedThreadPool(this.config.getS3UploadThreadPoolSize());
 		try {
 			List<Future<S3TaskResult>> futures = executor.invokeAll(uploadTasks);
 			for (Future<S3TaskResult> future : futures) {
@@ -361,8 +370,8 @@ public class SimpleDBMapper {
 	 *            "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/ConsistencySummary.html"
 	 *            >AWSドキュメント参照</a>
 	 */
-	public <T> int countAll(Class<T> clazz, boolean consistentRead) {
-		return count(clazz, null, consistentRead);
+	public <T> int countAll(Class<T> clazz) {
+		return count(clazz, null);
 	}
 
 	/**
@@ -379,13 +388,13 @@ public class SimpleDBMapper {
 	 *            "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/ConsistencySummary.html"
 	 *            >AWSドキュメント参照</a>
 	 */
-	public <T> int count(Class<T> clazz, QueryExpression expression, boolean consistentRead) {
+	public <T> int count(Class<T> clazz, QueryExpression expression) {
 		String whereExpression = null;
 		if (expression != null) {
 			whereExpression = expression.whereExpressionString();
 		}
 		String query = createQuery(clazz, true, whereExpression, 0);
-		SelectResult result = this.sdb.select(new SelectRequest(query, consistentRead));
+		SelectResult result = this.sdb.select(new SelectRequest(query, this.config.isConsistentRead()));
 		String countValue = result.getItems().get(0).getAttributes().get(0).getValue();
 		return Integer.parseInt(countValue);
 	}
@@ -407,9 +416,9 @@ public class SimpleDBMapper {
 	 *            >AWSドキュメント参照</a>
 	 * @return 0件の場合は空のListが返ってきます。
 	 */
-	public <T> List<T> selectAll(Class<T> clazz, boolean consistentRead) {
+	public <T> List<T> selectAll(Class<T> clazz) {
 		String query = createQuery(clazz, false, null, SimpleDBEntity.MAX_QUERY_LIMIT);
-		List<T> objects = fetch(clazz, query, consistentRead);
+		List<T> objects = fetch(clazz, query);
 		return objects;
 	}
 
@@ -432,10 +441,10 @@ public class SimpleDBMapper {
 	 *            >AWSドキュメント参照</a>
 	 * @return 0件の場合は空のListが返ってきます。
 	 */
-	public <T> List<T> select(Class<T> clazz, QueryExpression expression, boolean consistentRead) {
+	public <T> List<T> select(Class<T> clazz, QueryExpression expression) {
 		String whereExpression = expression.whereExpressionString();
 		String query = createQuery(clazz, false, whereExpression, expression.getLimit());
-		List<T> objects = fetch(clazz, query, consistentRead);
+		List<T> objects = fetch(clazz, query);
 		return objects;
 	}
 
@@ -451,13 +460,13 @@ public class SimpleDBMapper {
 	 * @throws SimpleDBMapperNotFoundException
 	 *             見つからなかった場合にスローされます
 	 */
-	public <T> T load(Class<T> clazz, Object itemName, boolean consistentRead) throws SimpleDBMapperNotFoundException {
+	public <T> T load(Class<T> clazz, Object itemName) throws SimpleDBMapperNotFoundException {
 		String itemNameInQuery = this.refrector.formattedString(itemName);
 
 		String whereExpression = "itemName()=" + SimpleDBUtils.quoteValue(itemNameInQuery);
 		String query = createQuery(clazz, false, whereExpression, 0);
 
-		List<T> objects = fetch(clazz, query, consistentRead);
+		List<T> objects = fetch(clazz, query);
 		if (objects.isEmpty()) {
 			throw new SimpleDBMapperNotFoundException("見つかりません。" + query);
 		}
@@ -472,8 +481,8 @@ public class SimpleDBMapper {
 		return false;
 	}
 
-	private <T> List<T> fetch(Class<T> clazz, String query, boolean consistentRead) {
-		SelectRequest selectRequest = new SelectRequest(query.toString(), consistentRead);
+	private <T> List<T> fetch(Class<T> clazz, String query) {
+		SelectRequest selectRequest = new SelectRequest(query.toString(), this.config.isConsistentRead());
 		// TODO nextTokenの保持の仕方
 		if (this.selectNextToken != null) {
 			selectRequest.setNextToken(this.selectNextToken);
