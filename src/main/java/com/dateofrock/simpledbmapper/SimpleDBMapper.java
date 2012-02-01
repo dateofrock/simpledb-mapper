@@ -103,7 +103,7 @@ public class SimpleDBMapper {
 				SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
 				if (blob != null) {
 					S3BlobReference s3BlobRef = new S3BlobReference(blob.attributeName(), blob.s3BucketName(),
-							blob.prefix(), field.get(object));
+							blob.prefix(), blob.contentType(), field.get(object));
 					blobList.add(s3BlobRef);
 				}
 			} catch (Exception e) {
@@ -160,6 +160,7 @@ public class SimpleDBMapper {
 		}
 
 		// SimpleDBBlob
+		// UploadするBlobをリストアップする
 		List<S3Task> uploadTasks = new ArrayList<S3Task>();
 		for (S3BlobReference s3BlobRef : blobList) {
 			String bucketName = s3BlobRef.getS3BucketName();
@@ -174,7 +175,7 @@ public class SimpleDBMapper {
 			}
 			prefix = prefix.trim();
 			s3Key.append(prefix);
-			if (!prefix.endsWith("/")) {
+			if (!prefix.isEmpty() && !prefix.endsWith("/")) {
 				s3Key.append("/");
 			}
 			s3Key.append(itemName).append("/").append(s3BlobRef.getAttributeName());
@@ -186,6 +187,7 @@ public class SimpleDBMapper {
 				// FIXME このタイミングがベストではない。ベストはSDBに対してDeleteAttributeする直後。
 				this.s3.deleteObject(bucketName, s3Key.toString());
 			} else {
+				// アップロード対象のBlobがすでにS3に保管されているものと同じであれば、再アップロードしないようにしたい。
 				InputStream input = null;
 				if (blobObject instanceof String) {
 					// BlobがString
@@ -198,7 +200,7 @@ public class SimpleDBMapper {
 					throw new SimpleDBMappingException("Blobに指定できるクラスはStringもしくはbyte[]のみです");
 				}
 				S3Task uploadTask = new S3Task(this.s3, s3BlobRef.getAttributeName(), input, bucketName,
-						s3Key.toString());
+						s3Key.toString(), s3BlobRef.getContentType());
 				uploadTasks.add(uploadTask);
 			}
 		}
@@ -389,6 +391,29 @@ public class SimpleDBMapper {
 	}
 
 	/**
+	 * selectを実行します。件数の最大値は2500件です。
+	 * 
+	 * <a href=
+	 * "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/UsingSelect.html"
+	 * >AWSドキュメント参照</a>
+	 * 
+	 * @param clazz
+	 *            {@link SimpleDBEntity}アノテーションがついたPOJO
+	 * @param consistentRead
+	 *            一貫性読み込みオプション。
+	 * 
+	 *            <a href=
+	 *            "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/ConsistencySummary.html"
+	 *            >AWSドキュメント参照</a>
+	 * @return 0件の場合は空のListが返ってきます。
+	 */
+	public <T> List<T> selectAll(Class<T> clazz, boolean consistentRead) {
+		String query = createQuery(clazz, false, null, SimpleDBEntity.MAX_QUERY_LIMIT);
+		List<T> objects = fetch(clazz, query, consistentRead);
+		return objects;
+	}
+
+	/**
 	 * selectを実行します。
 	 * 
 	 * <a href=
@@ -407,10 +432,9 @@ public class SimpleDBMapper {
 	 *            >AWSドキュメント参照</a>
 	 * @return 0件の場合は空のListが返ってきます。
 	 */
-	public <T> List<T> query(Class<T> clazz, QueryExpression expression, boolean consistentRead) {
+	public <T> List<T> select(Class<T> clazz, QueryExpression expression, boolean consistentRead) {
 		String whereExpression = expression.whereExpressionString();
 		String query = createQuery(clazz, false, whereExpression, expression.getLimit());
-
 		List<T> objects = fetch(clazz, query, consistentRead);
 		return objects;
 	}

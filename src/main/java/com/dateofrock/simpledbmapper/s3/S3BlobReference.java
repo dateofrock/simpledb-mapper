@@ -25,13 +25,15 @@ public class S3BlobReference {
 	private String attributeName;
 	private String s3BucketName;
 	private String prefix;
+	private String contentType;
 	private Object object;
 
-	public S3BlobReference(String attributeName, String s3BucketName, String prefix, Object object) {
+	public S3BlobReference(String attributeName, String s3BucketName, String prefix, String contentType, Object object) {
 		super();
 		this.attributeName = attributeName;
 		this.s3BucketName = s3BucketName;
 		this.prefix = prefix;
+		this.contentType = contentType;
 		this.object = object;
 	}
 
@@ -45,6 +47,10 @@ public class S3BlobReference {
 
 	public String getPrefix() {
 		return this.prefix;
+	}
+
+	public String getContentType() {
+		return this.contentType;
 	}
 
 	public Object getObject() {

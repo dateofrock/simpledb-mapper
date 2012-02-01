@@ -62,6 +62,12 @@ public class Book {
 	@SimpleDBAttribute(attributeName = "available")
 	public boolean available;
 
+	@SimpleDBBlob(attributeName = "review", s3BucketName = "simpledbmapper-book-testing", contentType = "text/plain")
+	public String review;
+
+	@SimpleDBBlob(attributeName = "coverImage", s3BucketName = "simpledbmapper-book-testing", contentType = "image/jpeg")
+	public byte[] coverImage;
+
 	@SimpleDBVersionAttribute
 	public Long version;
 }
@@ -72,7 +78,7 @@ public class Book {
 @SimpleDBEntityアノテーションでは、POJOを永続化したいSimpleDBのドメインを指定します。この例で言うと、「SimpleDBMapper-Book-Testing」に永続化されます。（リレーショナルデータベースで言い換えれば、テーブルの指定に相当します。）
 
 ###@SimpleDBItemName
-@SimpleDBItemNameアノテーションを指定されたpublicフィールドは、SimpleDBのItemNameにひもづけられます。（リレーショナルデータベースで言い換えれば、プライマリキーに相当します。）
+@SimpleDBItemNameアノテーションを指定されたフィールドは、SimpleDBのItemNameにひもづけられます。（リレーショナルデータベースで言い換えれば、プライマリキーに相当します。）
 ItemNameとして指定できる型は以下に制約されます。
 
 * java.lang.String
@@ -81,7 +87,7 @@ ItemNameとして指定できる型は以下に制約されます。
 * java.lang.Long
 
 ###@SimpleDBAttribute
-@SimpleDBAttributeアノテーションを指定されたpublicフィールドは、SimpleDBのattributeにひもづけられます。（リレーショナルデータベースで言い換えれば、カラムに相当します。）
+@SimpleDBAttributeアノテーションを指定されたフィールドは、SimpleDBのattributeにひもづけられます。（リレーショナルデータベースで言い換えれば、カラムに相当します。）
 attributeとして指定できる型は以下に制約されます。
 
 * java.lang.String
@@ -97,10 +103,17 @@ attributeとして指定できる型は以下に制約されます。
 
 
 ###@SimpleDBBlob
-//執筆中
+@SimpleDBBlobアノテーションで指定されたフィールドは、SimpleDBの制限である1024byteを超える大きなデータを永続化したい場合に使います。データそのものはS3に保存され、SimpleDBのアトリビュートにはその参照情報（バケット名、キーなど）が記載されます。
+simpledb-mapperはその参照情報をもとに自動的にPOJOにデータをセットします。
+指定できる型は
+
+* java.lang.String
+* byte[]
+
+のみです。
 
 ###@SimpleDBVersionAttribute
-@SimpleDBVersionAttributeアノテーションで指定されたpublicフィールドは、SimpleDBにアイテムをPUT/DELETEする際にトランザクション制御（楽観的ロック）を実現するためのフィールドになります。このフィールドはsimpledb-mapperが内部的に使用するものです。この指定は必須ではありません。
+@SimpleDBVersionAttributeアノテーションで指定されたフィールドは、SimpleDBにアイテムをPUT/DELETEする際にトランザクション制御（楽観的ロック）を実現するためのフィールドになります。このフィールドはsimpledb-mapperが内部的に使用するものです。この指定は必須ではありません。
 指定できる型は
 
 * java.lang.Long
@@ -108,7 +121,7 @@ attributeとして指定できる型は以下に制約されます。
 のみです。
 
 
->@SimpleDBItemName、@SimpleDBAttribute、@SimpleDBVersionAttributeのアノテーションはフィールドにのみ対応します。getter/setterメソッドのサポートは現状ありません。
+>@SimpleDBItemName、@SimpleDBAttribute、@SimpleDBVersionAttribute、@SimpleDBBlobのアノテーションはフィールドにのみ対応します。getter/setterメソッドのサポートは現状ありません。
 
 
 
@@ -127,7 +140,7 @@ Mavenのリポジトリを用意してありますので、pom.xmlに以下の�
 	<dependency>
 		<groupId>com.dateofrock.aws</groupId>
 		<artifactId>simpledb-mapper</artifactId>
-		<version>0.2-SNAPSHOT</version>
+		<version>0.3-SNAPSHOT</version>
 	</dependency>
 </dependencies>
 ```
@@ -227,13 +240,12 @@ count = mapper.count(Book.class, expression, true);
 Limitation
 ==============
 
-* @SimpleDBAttributeアノテーションはフィールドにのみ指定できます。
-* @SimpleDBItemNameの自動発行機能（リレーショナルデータベースで一般的なAUTO INCREMENTやSERIAL的な自動採番機能）はありません。
-* BatchPutAttribute/BatchDeleteAttributeはサポートされていません。
-* データセットパーティショニング（ドメイン分割／シャーディング）機能はサポートされていません。（参考：[SimpleDB Developer Guide: Data Set Partitioning](http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/DataSetPartitioning.html)）
 * Integer/Float/Doubleにて、負の値はサポートされていません。(Issue: https://github.com/dateofrock/simpledb-mapper/issues/1)
 * エラーメッセージなどが国際化（英語化）されていません。(Issue: https://github.com/dateofrock/simpledb-mapper/issues/2)
 * 比較演算子between、in、everyはサポートされていません。(Issue: https://github.com/dateofrock/simpledb-mapper/issues/3)（参考：[SimpleDB Developer Guide: Comparison Operators](http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/UsingSelectOperators.html)）
+* @SimpleDBItemNameの自動発行機能（リレーショナルデータベースで一般的なAUTO INCREMENTやSERIAL的な自動採番機能）はありません。
+* BatchPutAttribute/BatchDeleteAttributeはサポートされていません。
+* データセットパーティショニング（ドメイン分割／シャーディング）機能はサポートされていません。（参考：[SimpleDB Developer Guide: Data Set Partitioning](http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/DataSetPartitioning.html)）
 
 
 Licence
@@ -241,6 +253,8 @@ Licence
 * ソースコードはApache Licence 2.0とし、すべてをgithub上に公開する事とします。（[https://github.com/dateofrock/simpledb-mapper](https://github.com/dateofrock/simpledb-mapper)）
 * 当ソフトウェアの動作は保証しません。ご自身の責任と判断でご利用ください。
 * 当ソフトウェアを利用することにより発生したいかなる損害も当方は責任を負わないものとします。
+
+
 
 Author
 ==============

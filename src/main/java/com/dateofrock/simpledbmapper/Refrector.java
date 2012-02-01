@@ -15,11 +15,7 @@
  */
 package com.dateofrock.simpledbmapper;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.text.ParseException;
@@ -35,6 +31,7 @@ import com.amazonaws.services.simpledb.model.Attribute;
 import com.amazonaws.services.simpledb.util.SimpleDBUtils;
 import com.dateofrock.simpledbmapper.s3.S3TaskResult;
 import com.dateofrock.simpledbmapper.s3.S3TaskResult.Operation;
+import com.dateofrock.simpledbmapper.util.IOUtils;
 
 /**
  * {@link SimpleDBMapper}のためのリフレクションユーティリティ。
@@ -86,7 +83,7 @@ class Refrector {
 	}
 
 	String findVersionAttributeName(Class<?> clazz) {
-		Field[] fields = clazz.getFields();
+		Field[] fields = clazz.getDeclaredFields();
 		for (Field field : fields) {
 			SimpleDBVersionAttribute versionAttribute = field.getAnnotation(SimpleDBVersionAttribute.class);
 			if (versionAttribute != null) {
@@ -115,7 +112,9 @@ class Refrector {
 		Field[] fields = clazz.getDeclaredFields();
 		for (Field field : fields) {
 			try {
-				setFieldValue(s3, instance, field, attributeName, attributeValue);
+				// attribute/blob
+				// TODO Blobのダウンロードは平行処理にしたい
+				setAttributeAndBlobValueToField(s3, instance, field, attributeName, attributeValue);
 			} catch (Exception e) {
 				throw new SimpleDBMappingException("fieldのセットに失敗", e);
 			}
@@ -124,8 +123,8 @@ class Refrector {
 	}
 
 	@SuppressWarnings("unchecked")
-	private <T> void setFieldValue(AmazonS3 s3, T instance, Field field, String attributeName, String attributeValue)
-			throws IllegalAccessException, ParseException {
+	private <T> void setAttributeAndBlobValueToField(AmazonS3 s3, T instance, Field field, String attributeName,
+			String attributeValue) throws IllegalAccessException, ParseException {
 		Class<?> type;
 		type = field.getType();
 
@@ -200,47 +199,11 @@ class Refrector {
 			InputStream input = s3Obj.getObjectContent();
 			if (isStringType(type)) {
 				// FIXME encoding決めうち
-				InputStreamReader reader = null;
-				StringWriter writer = null;
-				try {
-					reader = new InputStreamReader(input, "UTF-8");
-					writer = new StringWriter();
-					int c;
-					while ((c = reader.read()) != -1) {
-						writer.write(c);
-					}
-					writer.flush();
-					String stringValue = writer.toString();
-					field.set(instance, stringValue);
-				} catch (IOException e) {
-					throw new SimpleDBMapperS3HandleException("S3よりオブジェクト読み込み失敗(String)", e);
-				} finally {
-					try {
-						reader.close();
-						writer.close();
-					} catch (Exception ignore) {
-					}
-				}
-
+				String stringValue = IOUtils.readString(input, "UTF-8");
+				field.set(instance, stringValue);
 			} else if (isPrimitiveByteArrayType(type)) {
-				ByteArrayOutputStream out = new ByteArrayOutputStream();
-				int c;
-				try {
-					while ((c = input.read()) != -1) {
-						out.write(c);
-					}
-					out.flush();
-					byte[] bytes = out.toByteArray();
-					field.set(instance, bytes);
-				} catch (IOException e) {
-					throw new SimpleDBMapperS3HandleException("S3よりオブジェクト読み込み失敗(byte[])", e);
-				} finally {
-					try {
-						out.close();
-					} catch (IOException ignore) {
-					}
-				}
-
+				byte[] bytes = IOUtils.readBytes(input);
+				field.set(instance, bytes);
 			}
 		}
 	}

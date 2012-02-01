@@ -19,7 +19,9 @@ import java.io.InputStream;
 import java.util.concurrent.Callable;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.dateofrock.simpledbmapper.s3.S3TaskResult.Operation;
+import com.dateofrock.simpledbmapper.util.IOUtils;
 
 /**
  * 
@@ -31,14 +33,16 @@ public class S3Task implements Callable<S3TaskResult> {
 	private String simpleDBAttributeName;
 	private AmazonS3 s3;
 	private InputStream input;
-	private String bucketName, key;
+	private String bucketName, key, contentType;
 
-	public S3Task(AmazonS3 s3, String simpleDBAttributeName, InputStream input, String bucketName, String key) {
+	public S3Task(AmazonS3 s3, String simpleDBAttributeName, InputStream input, String bucketName, String key,
+			String contentType) {
 		this.simpleDBAttributeName = simpleDBAttributeName;
 		this.s3 = s3;
 		this.input = input;
 		this.bucketName = bucketName;
 		this.key = key;
+		this.contentType = contentType;
 	}
 
 	@Override
@@ -46,11 +50,18 @@ public class S3Task implements Callable<S3TaskResult> {
 		S3TaskResult taskResult = new S3TaskResult(Operation.UPLOAD, this.simpleDBAttributeName, this.bucketName,
 				this.key);
 		try {
-			this.s3.putObject(this.bucketName, this.key, this.input, null);
+			ObjectMetadata meta = null;
+			if (this.contentType != null) {
+				meta = new ObjectMetadata();
+				meta.setContentType(this.contentType);
+			}
+			this.s3.putObject(this.bucketName, this.key, this.input, meta);
 			taskResult.setSuccess(true);
 		} catch (Exception e) {
 			taskResult.setSuccess(false);
 			taskResult.setS3Exception(e);
+		} finally {
+			IOUtils.closeQuietly(this.input);
 		}
 		return taskResult;
 	}

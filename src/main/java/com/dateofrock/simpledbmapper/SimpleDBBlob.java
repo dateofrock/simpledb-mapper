@@ -47,4 +47,5 @@ public @interface SimpleDBBlob {
 	 */
 	String prefix() default "";
 
+	String contentType() default "";
 }

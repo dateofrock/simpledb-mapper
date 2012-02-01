@@ -20,17 +20,11 @@ import static com.dateofrock.simpledbmapper.query.ComparisonOperator.Like;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Reader;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -50,6 +44,7 @@ import com.dateofrock.simpledbmapper.query.ComparisonOperator;
 import com.dateofrock.simpledbmapper.query.Condition;
 import com.dateofrock.simpledbmapper.query.QueryExpression;
 import com.dateofrock.simpledbmapper.query.Sort;
+import com.dateofrock.simpledbmapper.util.IOUtils;
 
 /**
  * 注意：このテストを実行すると、実際にSimpleDB/S3にアクセスします。
@@ -77,6 +72,11 @@ public class SimpleDBMapperTest {
 		sdb.setEndpoint(this.simpleDBAPIEndPoint);
 		AmazonS3 s3 = new AmazonS3Client(cred);
 		this.mapper = new SimpleDBMapper(sdb, s3);
+
+		List<Book> allBooks = this.mapper.selectAll(Book.class, true);
+		for (Book book : allBooks) {
+			this.mapper.delete(book);
+		}
 	}
 
 	@Test
@@ -114,7 +114,7 @@ public class SimpleDBMapperTest {
 		Sort sort = new Sort("title");
 		expression.setSort(sort);
 
-		List<Book> books = this.mapper.query(Book.class, expression, true);
+		List<Book> books = this.mapper.select(Book.class, expression, true);
 		assertBook(book1, books.get(1));
 		assertBook(book2, books.get(0));
 
@@ -122,7 +122,7 @@ public class SimpleDBMapperTest {
 		sort = new Sort("publishedAt");
 		expression.setSort(sort);
 
-		books = this.mapper.query(Book.class, expression, true);
+		books = this.mapper.select(Book.class, expression, true);
 		assertBook(book1, books.get(0));
 		assertBook(book2, books.get(1));
 
@@ -139,41 +139,40 @@ public class SimpleDBMapperTest {
 
 	}
 
-	// @Test
-	// public void testManyBooks() throws Exception {
-	// // List<Book> manyBooks = new ArrayList<Book>();
-	// // for (int i = 0; i < 2600; i++) {
-	// // Book book = newBook1((long) i);
-	// // book.price += i;
-	// // manyBooks.add(book);
-	// // this.mapper.save(book);
-	// // }
-	//
-	// assertEquals(2600, this.mapper.countAll(Book.class, true));
-	//
-	// QueryExpression expression = new QueryExpression(
-	// new Condition("itemName()", ComparisonOperator.IsNotNull, null));
-	// expression.setLimit(2500);
-	// expression.setSort(new Sort("itemName()"));
-	//
-	// List<Book> fetchedBooks = this.mapper.query(Book.class, expression,
-	// true);
-	// while (this.mapper.hasNext()) {
-	// fetchedBooks.addAll(this.mapper.query(Book.class, expression, true));
-	// }
-	//
-	// List<Long> itemNameList = new ArrayList<Long>();
-	// for (Book book : fetchedBooks) {
-	// itemNameList.add(book.id);
-	// }
-	// Collections.sort(itemNameList);
-	// assertEquals(2600, itemNameList.size());
-	// Long expectedItemName = 0L;
-	// for (Long itemName : itemNameList) {
-	// assertEquals(expectedItemName, itemName);
-	// expectedItemName += 1;
-	// }
-	// }
+	@Test
+	public void testManyBooks() throws Exception {
+		List<Book> manyBooks = new ArrayList<Book>();
+		for (int i = 0; i < 10; i++) {
+			Book book = newBook1((long) i);
+			book.price += i;
+			manyBooks.add(book);
+			this.mapper.save(book);
+		}
+
+		assertEquals(10, this.mapper.countAll(Book.class, true));
+
+		QueryExpression expression = new QueryExpression(
+				new Condition("itemName()", ComparisonOperator.IsNotNull, null));
+		expression.setLimit(5);
+		expression.setSort(new Sort("itemName()"));
+
+		List<Book> fetchedBooks = this.mapper.select(Book.class, expression, true);
+		while (this.mapper.hasNext()) {
+			fetchedBooks.addAll(this.mapper.select(Book.class, expression, true));
+		}
+
+		List<Long> itemNameList = new ArrayList<Long>();
+		for (Book book : fetchedBooks) {
+			itemNameList.add(book.id);
+		}
+		Collections.sort(itemNameList);
+		assertEquals(10, itemNameList.size());
+		Long expectedItemName = 0L;
+		for (Long itemName : itemNameList) {
+			assertEquals(expectedItemName, itemName);
+			expectedItemName += 1;
+		}
+	}
 
 	private void assertBook(Book book, Book fetchedBook) {
 		assertEquals(book.id, fetchedBook.id);
@@ -195,84 +194,15 @@ public class SimpleDBMapperTest {
 
 	private String readUTF8String(String resourceName) {
 		InputStream instr = this.getClass().getResourceAsStream(resourceName);
-		InputStreamReader reader = null;
-		StringWriter writer = null;
-		try {
-			reader = new InputStreamReader(instr, "UTF-8");
-			writer = new StringWriter();
-			int c;
-			while ((c = reader.read()) != -1) {
-				writer.write(c);
-			}
-			return writer.toString();
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		} finally {
-			closeQuietly(reader);
-			closeQuietly(writer);
-			closeQuietly(instr);
-		}
+		return IOUtils.readString(instr, "UTF-8");
 	}
 
 	private byte[] readBytes(String resourceName) {
 		InputStream instr = this.getClass().getResourceAsStream(resourceName);
-		ByteArrayOutputStream bout = new ByteArrayOutputStream();
-		BufferedOutputStream bo = new BufferedOutputStream(bout);
-		int c;
-		try {
-			while ((c = instr.read()) != -1) {
-				bo.write(c);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		} finally {
-			closeQuietly(bo);
-			closeQuietly(bout);
-			closeQuietly(instr);
-		}
-		return bout.toByteArray();
+		return IOUtils.readBytes(instr);
 	}
 
-	private void closeQuietly(OutputStream bout) {
-		if (bout != null) {
-			try {
-				bout.close();
-			} catch (IOException ignore) {
-			}
-		}
-	}
-
-	private void closeQuietly(InputStream instr) {
-		if (instr != null) {
-			try {
-				instr.close();
-			} catch (IOException ignore) {
-			}
-		}
-	}
-
-	private void closeQuietly(Reader reader) {
-		if (reader != null) {
-			try {
-				reader.close();
-			} catch (IOException ignore) {
-			}
-		}
-	}
-
-	private void closeQuietly(Writer writer) {
-		if (writer != null) {
-			try {
-				writer.close();
-			} catch (IOException ignore) {
-			}
-		}
-
-	}
-
-	private Book newBook1(Long itemName) throws ParseException {
+	private Book newBook1(Long itemName) throws Exception {
 		Book book = new Book();
 		book.id = itemName;
 		book.title = "面白い本";
@@ -290,7 +220,7 @@ public class SimpleDBMapperTest {
 		return book;
 	}
 
-	private Book newBook2(Long itemName) throws ParseException {
+	private Book newBook2(Long itemName) throws Exception {
 		Book book = new Book();
 		book.id = itemName;
 		book.title = "すごい本";

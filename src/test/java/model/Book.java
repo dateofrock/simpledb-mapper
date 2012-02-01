@@ -59,10 +59,10 @@ public class Book {
 	@SimpleDBAttribute(attributeName = "available")
 	public boolean available;
 
-	@SimpleDBBlob(attributeName = "review", s3BucketName = "simpledbmapper-book-testing", prefix = "review/")
+	@SimpleDBBlob(attributeName = "review", s3BucketName = "simpledbmapper-book-testing", prefix = "Reviews/", contentType = "text/plain")
 	public String review;
 
-	@SimpleDBBlob(attributeName = "coverImage", s3BucketName = "simpledbmapper-book-testing", prefix = "coverImage/")
+	@SimpleDBBlob(attributeName = "coverImage", s3BucketName = "simpledbmapper-book-testing", prefix = "Images/", contentType = "image/jpeg")
 	public byte[] coverImage;
 
 	@SimpleDBVersionAttribute
