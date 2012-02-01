@@ -41,4 +41,15 @@ public @interface SimpleDBEntity {
 	public static final int MAX_QUERY_LIMIT = 2500;
 
 	String domainName();
+
+	/**
+	 * データを保存したいバケット名
+	 */
+	String s3BucketName() default "";
+
+	/**
+	 * S3キーのプレフィックス
+	 */
+	String s3KeyPrefix() default "";
+
 }

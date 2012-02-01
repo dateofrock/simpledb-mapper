@@ -37,15 +37,5 @@ public @interface SimpleDBBlob {
 
 	String attributeName();
 
-	/**
-	 * データを保存したいバケット名
-	 */
-	String s3BucketName();
-
-	/**
-	 * S3キーのプレフィックス
-	 */
-	String prefix() default "";
-
 	String contentType() default "";
 }

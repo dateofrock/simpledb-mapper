@@ -74,12 +74,25 @@ class Refrector {
 		return list;
 	}
 
-	String findDomainName(Class<?> clazz) {
+	SimpleDBEntity getEntityAnnotation(Class<?> clazz) {
 		SimpleDBEntity entity = clazz.getAnnotation(SimpleDBEntity.class);
 		if (entity == null) {
 			throw new SimpleDBMappingException(clazz + "は@SimpleDBEntityアノテーションがありません");
 		}
-		return entity.domainName();
+		return entity;
+	}
+
+	String findDomainName(Class<?> clazz) {
+		return getEntityAnnotation(clazz).domainName();
+	}
+
+
+	String findS3BucketName(Class<?> clazz) {
+		return clazz.getAnnotation(SimpleDBEntity.class).s3BucketName();
+	}
+
+	String findS3KeyPrefix(Class<?> clazz) {
+		return clazz.getAnnotation(SimpleDBEntity.class).s3KeyPrefix();
 	}
 
 	String findVersionAttributeName(Class<?> clazz) {

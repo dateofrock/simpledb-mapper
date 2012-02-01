@@ -29,7 +29,7 @@ import com.dateofrock.simpledbmapper.SimpleDBVersionAttribute;
  * 
  * @author dateofrock
  */
-@SimpleDBEntity(domainName = "SimpleDBMapper-Book-Testing")
+@SimpleDBEntity(domainName = "SimpleDBMapper-Book-Testing", s3BucketName = "simpledbmapper-book-testing", s3KeyPrefix = "simpledb-blob")
 public class Book {
 
 	@SimpleDBItemName
@@ -59,10 +59,10 @@ public class Book {
 	@SimpleDBAttribute(attributeName = "available")
 	public boolean available;
 
-	@SimpleDBBlob(attributeName = "review", s3BucketName = "simpledbmapper-book-testing", prefix = "Reviews/", contentType = "text/plain")
+	@SimpleDBBlob(attributeName = "review", contentType = "text/plain")
 	public String review;
 
-	@SimpleDBBlob(attributeName = "coverImage", s3BucketName = "simpledbmapper-book-testing", prefix = "Images/", contentType = "image/jpeg")
+	@SimpleDBBlob(attributeName = "coverImage", contentType = "image/jpeg")
 	public byte[] coverImage;
 
 	@SimpleDBVersionAttribute

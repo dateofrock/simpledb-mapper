@@ -4,7 +4,7 @@
 
 	<groupId>com.dateofrock.aws</groupId>
 	<artifactId>simpledb-mapper</artifactId>
-	<version>0.4-SNAPSHOT</version>
+	<version>0.5-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>simpledb-mapper</name>

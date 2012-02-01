@@ -111,8 +111,10 @@ public class SimpleDBMapper {
 				}
 				SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
 				if (blob != null) {
-					S3BlobReference s3BlobRef = new S3BlobReference(blob.attributeName(), blob.s3BucketName(),
-							blob.prefix(), blob.contentType(), field.get(object));
+					// FIXME バケット名、KeyPrefixの持ち方を再考するべき
+					S3BlobReference s3BlobRef = new S3BlobReference(blob.attributeName(),
+							this.refrector.findS3BucketName(clazz), this.refrector.findS3KeyPrefix(clazz),
+							blob.contentType(), field.get(object));
 					blobList.add(s3BlobRef);
 				}
 			} catch (Exception e) {
