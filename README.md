@@ -30,6 +30,7 @@ mapper.save(book1);
 Usage
 ----
 始めに、SimpleDBにドメインを作成します。ドメインを作成するメソッドがSimpleDBMapperにあります。
+
 ```java
 SimpleDBMapper mapper = new SimpleDBMapper(sdb, s3);
 mapper.createDomain(Book.class);
