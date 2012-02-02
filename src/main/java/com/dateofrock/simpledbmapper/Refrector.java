@@ -86,7 +86,6 @@ class Refrector {
 		return getEntityAnnotation(clazz).domainName();
 	}
 
-
 	String findS3BucketName(Class<?> clazz) {
 		return clazz.getAnnotation(SimpleDBEntity.class).s3BucketName();
 	}

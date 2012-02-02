@@ -40,7 +40,7 @@ public class SimpleDBMapperConfig {
 	}
 
 	public int geS3AccessThreadPoolSize() {
-		return s3AccessThreadPoolSize;
+		return this.s3AccessThreadPoolSize;
 	}
 
 	public void setS3AccessThreadPoolSize(int s3UploadThreadPoolSize) {
@@ -48,7 +48,7 @@ public class SimpleDBMapperConfig {
 	}
 
 	public boolean isConsistentRead() {
-		return consistentRead;
+		return this.consistentRead;
 	}
 
 	public void setConsistentRead(boolean consistentRead) {

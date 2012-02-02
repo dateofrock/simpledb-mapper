@@ -42,6 +42,7 @@ import com.amazonaws.services.simpledb.AmazonSimpleDB;
 import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
 import com.dateofrock.simpledbmapper.query.ComparisonOperator;
 import com.dateofrock.simpledbmapper.query.Condition;
+import com.dateofrock.simpledbmapper.query.Ordering;
 import com.dateofrock.simpledbmapper.query.QueryExpression;
 import com.dateofrock.simpledbmapper.query.Sort;
 import com.dateofrock.simpledbmapper.util.IOUtils;
@@ -68,12 +69,15 @@ public class SimpleDBMapperTest {
 	public void setUp() throws Exception {
 		AWSCredentials cred = new PropertiesCredentials(
 				SimpleDBMapperTest.class.getResourceAsStream("/AwsCredentials.properties"));
-		
+
 		AmazonSimpleDB sdb = new AmazonSimpleDBClient(cred);
 		sdb.setEndpoint(this.simpleDBAPIEndPoint);
 		AmazonS3 s3 = new AmazonS3Client(cred);
-		
+
 		this.mapper = new SimpleDBMapper(sdb, s3);
+
+		// this.mapper.dropDomainIfEmpty(Book.class);
+		// this.mapper.createDomain(Book.class);
 
 		List<Book> allBooks = this.mapper.selectAll(Book.class);
 		for (Book book : allBooks) {
@@ -83,9 +87,10 @@ public class SimpleDBMapperTest {
 
 	@Test
 	public void test() throws Exception {
-		Book book1 = newBook1(123L);
-		Book book2 = newBook2(456L);
+		Book book1 = newBook1(1000L);
+		Book book2 = newBook2(2000L);
 		this.mapper.save(book1);
+
 		Book fetchedBook = this.mapper.load(Book.class, book1.id);
 		assertBook(book1, fetchedBook);
 
@@ -93,33 +98,44 @@ public class SimpleDBMapperTest {
 		fetchedBook = this.mapper.load(Book.class, book2.id);
 		assertBook(book2, fetchedBook);
 
-		book1.authors.remove("著者A");
-		this.mapper.save(book1);
-		fetchedBook = this.mapper.load(Book.class, book1.id);
-		assertBook(book1, fetchedBook);
+		book2.authors.remove("恥 晒");
+		this.mapper.save(book2);
+		fetchedBook = this.mapper.load(Book.class, book2.id);
+		assertBook(book2, fetchedBook);
 
-		QueryExpression expression = new QueryExpression(new Condition("title", Equals, "すごい本"));
+		QueryExpression expression = new QueryExpression(new Condition("title", Equals, "ドン引きの美学"));
 		int count = this.mapper.count(Book.class, expression);
 		assertEquals(1, count);
 
-		expression = new QueryExpression(new Condition("title", Like, "%本"));
-		Sort sort = new Sort("title");
+		expression = new QueryExpression(new Condition("title", Like, "%美学"));
+		count = this.mapper.count(Book.class, expression);
+		assertEquals(1, count);
+
+		expression = new QueryExpression(new Condition("publishedAt", ComparisonOperator.GreaterThan,
+				toDate("2000-1-1 00:00:00")));
+		Sort sort = new Sort(Ordering.ASC, "publishedAt");
 		expression.setSort(sort);
 
 		List<Book> books = this.mapper.select(Book.class, expression);
-		assertBook(book1, books.get(1));
-		assertBook(book2, books.get(0));
-
-		expression = new QueryExpression(new Condition("publishedAt", ComparisonOperator.IsNotNull, null));
-		sort = new Sort("publishedAt");
-		expression.setSort(sort);
-
-		books = this.mapper.select(Book.class, expression);
 		assertBook(book1, books.get(0));
 		assertBook(book2, books.get(1));
 
-		count = this.mapper.count(Book.class, expression);
-		assertEquals(2, count);
+		sort = new Sort(Ordering.DESC, "publishedAt");
+		expression.setSort(sort);
+
+		books = this.mapper.select(Book.class, expression);
+		assertBook(book1, books.get(1));
+		assertBook(book2, books.get(0));
+
+		expression = new QueryExpression(new Condition("publishedAt", ComparisonOperator.GreaterThan,
+				toDate("2000-1-1 00:00:00")));
+		expression
+				.addAndCondtion(new Condition("publishedAt", ComparisonOperator.LessThan, toDate("2100-1-1 00:00:00")));
+		sort = new Sort(Ordering.ASC, "publishedAt");
+		expression.setSort(sort);
+		books = this.mapper.select(Book.class, expression);
+		assertBook(book1, books.get(0));
+		assertBook(book2, books.get(1));
 
 		this.mapper.delete(book1);
 		count = this.mapper.countAll(Book.class);
@@ -199,10 +215,9 @@ public class SimpleDBMapperTest {
 	private Book newBook1(Long itemName) throws Exception {
 		Book book = new Book();
 		book.id = itemName;
-		book.title = "面白い本";
+		book.title = "ドン引きの美学";
 		book.authors = new HashSet<String>();
-		book.authors.add("著者A");
-		book.authors.add("著者B");
+		book.authors.add("氷点空気愛好会");
 		book.price = 1280;
 		book.publishedAt = toDate("2012-1-20 00:00:00");
 		book.isbn = "1234567890";
@@ -217,9 +232,10 @@ public class SimpleDBMapperTest {
 	private Book newBook2(Long itemName) throws Exception {
 		Book book = new Book();
 		book.id = itemName;
-		book.title = "すごい本";
+		book.title = "スベらないプレゼン";
 		book.authors = new HashSet<String>();
-		book.authors.add("著者X");
+		book.authors.add("恥 忍");
+		book.authors.add("恥 晒");
 		book.price = 480;
 		book.publishedAt = toDate("2015-3-10 00:00:00");
 		book.isbn = "0987654321";

@@ -34,10 +34,13 @@ import java.util.concurrent.Future;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.simpledb.AmazonSimpleDB;
 import com.amazonaws.services.simpledb.model.Attribute;
+import com.amazonaws.services.simpledb.model.CreateDomainRequest;
 import com.amazonaws.services.simpledb.model.DeleteAttributesRequest;
+import com.amazonaws.services.simpledb.model.DeleteDomainRequest;
 import com.amazonaws.services.simpledb.model.GetAttributesRequest;
 import com.amazonaws.services.simpledb.model.GetAttributesResult;
 import com.amazonaws.services.simpledb.model.Item;
+import com.amazonaws.services.simpledb.model.NoSuchDomainException;
 import com.amazonaws.services.simpledb.model.PutAttributesRequest;
 import com.amazonaws.services.simpledb.model.ReplaceableAttribute;
 import com.amazonaws.services.simpledb.model.SelectRequest;
@@ -76,6 +79,37 @@ public class SimpleDBMapper {
 		this.s3 = s3;
 		this.config = config;
 		this.refrector = new Refrector();
+	}
+
+	/**
+	 * 対象ドメインにアイテムが一件もない場合に限ってドメインを削除します
+	 * 
+	 * @throws SimpleDBMapperNotEmptyException
+	 */
+	public void dropDomainIfEmpty(Class<?> entityClass) throws SimpleDBMapperNotEmptyException {
+		String domainName = this.refrector.findDomainName(entityClass);
+		int count = 0;
+		try {
+			count = this.countAll(entityClass);
+		} catch (NoSuchDomainException ignore) {
+			return;
+		}
+
+		if (count > 0) {
+			throw new SimpleDBMapperNotEmptyException(String.format("ドメイン %s には、すでに %s 件のアイテムが登録されているので削除できません",
+					domainName, count));
+		}
+		this.sdb.deleteDomain(new DeleteDomainRequest(domainName));
+	}
+
+	/**
+	 * SimpleDBにドメインを作成します
+	 * 
+	 * @see AmazonSimpleDB#createDomain(CreateDomainRequest)
+	 */
+	public void createDomain(Class<?> entityClass) {
+		String domainName = this.refrector.findDomainName(entityClass);
+		this.sdb.createDomain(new CreateDomainRequest(domainName));
 	}
 
 	/**

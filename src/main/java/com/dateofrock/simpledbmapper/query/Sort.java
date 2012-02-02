@@ -15,7 +15,7 @@
  */
 package com.dateofrock.simpledbmapper.query;
 
-import com.dateofrock.simpledbmapper.SimpleDBMappingException;
+import com.amazonaws.services.simpledb.util.SimpleDBUtils;
 
 /**
  * select queryのorder byを表現します。
@@ -42,13 +42,15 @@ public class Sort {
 	}
 
 	String stringExpression() {
-		switch (this.ordering) {
-		case ASC:
-			return "order by " + this.attributeName;
-		case DESC:
-			return "order by " + this.attributeName + Ordering.DESC.getValue();
-		default:
-			throw new SimpleDBMappingException("Sorry! not implemented!");
+		StringBuilder expression = new StringBuilder("order by ");
+		if (this.attributeName.equalsIgnoreCase("itemName()")) {
+			expression.append(this.attributeName);
+		} else {
+			expression.append(SimpleDBUtils.quoteName(this.attributeName));
 		}
+		if (this.ordering == Ordering.DESC) {
+			expression.append(" ").append(Ordering.DESC.getValue());
+		}
+		return expression.toString();
 	}
 }

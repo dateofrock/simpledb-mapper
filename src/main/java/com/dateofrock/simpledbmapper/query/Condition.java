@@ -43,7 +43,13 @@ public class Condition {
 	}
 
 	String expression() {
-		StringBuilder expression = new StringBuilder(this.attributeName);
+		StringBuilder expression = new StringBuilder();
+		if (this.attributeName.equalsIgnoreCase("itemName()")) {
+			expression.append(this.attributeName);
+		} else {
+			expression.append(SimpleDBUtils.quoteName(this.attributeName));
+		}
+
 		expression.append(" ").append(this.comparisonOperator.getValue()).append(" ");
 		if (this.attributeValue == null) {
 			switch (this.comparisonOperator) {
@@ -56,8 +62,10 @@ public class Condition {
 						"attributeValueがnullの場合、comparisonOperatorがIsNullもしくはIsNotNullである必要があります。");
 			}
 		}
+
+		expression.append("'");
 		if (this.attributeValue instanceof String) {
-			expression.append(SimpleDBUtils.quoteValue((String) this.attributeValue));
+			expression.append((String) this.attributeValue);
 		} else if (this.attributeValue instanceof Date) {
 			expression.append(SimpleDBUtils.encodeDate((Date) this.attributeValue));
 		} else if (this.attributeValue instanceof Integer) {
@@ -72,6 +80,8 @@ public class Condition {
 		} else {
 			throw new SimpleDBMappingException("attributeValueの型が非サポートです。" + this.attributeValue);
 		}
+		expression.append("'");
+
 		return expression.toString();
 	}
 }

@@ -29,7 +29,11 @@ mapper.save(book1);
 
 Usage
 ----
-始めに、SimpleDBにドメインを作成します。AWSのAPIを利用してあらかじめドメインを作成しておいてください。
+始めに、SimpleDBにドメインを作成します。ドメインを作成するメソッドがSimpleDBMapperにあります。
+```java
+SimpleDBMapper mapper = new SimpleDBMapper(sdb, s3);
+mapper.createDomain(Book.class);
+```
 
 SimpleDBに永続化したいモデルをPOJOとして表現し、そこにsimpledb-mapperが用意してあるアノテーションを付け加えます。以下、サンプルとしてBookというPOJOを例に解説します。
 
@@ -150,7 +154,7 @@ Mavenのリポジトリを用意してありますので、pom.xmlに以下の�
 	<dependency>
 		<groupId>com.dateofrock.aws</groupId>
 		<artifactId>simpledb-mapper</artifactId>
-		<version>0.5-SNAPSHOT</version>
+		<version>0.6-SNAPSHOT</version>
 	</dependency>
 </dependencies>
 ```
@@ -168,38 +172,38 @@ AmazonSimpleDB sdb = new AmazonSimpleDBClient(cred);
 sdb.setEndpoint("sdb.ap-northeast-1.amazonaws.com"); 
 AmazonS3 s3 = new AmazonS3Client(cred);
 
-SimpleDBMapper mapper = new SimpleDBMapper(sdb);
+SimpleDBMapper mapper = new SimpleDBMapper(sdb, s3);
 ```
  
 @SimpleDBEntityアノテーションが指定されたPOJOを用意します。simpledb-mapperではItemNameの自動生成をサポートしていませんので、自分で作る必要があります。
 
 ```java
-Book book1 = new Book();
-book1.id = 123L;
-book1.title = "面白い本";
-book1.authors = new HashSet<String>();
-book1.authors.add("著者A");
-book1.authors.add("著者B");
-book1.price = 1280;
-book1.publishedAt = new Date();
-book1.isbn = "1234567890";
-book1.width = 18.2f;
-book1.height = 25.6f;
-book1.available = true;
-book1.review = largeText; //largeTextは1024byte以上のテキスト
-book1.coverImage = coverImageBitMap //例えばJPEG画像など
+Book book = new Book();
+book.id = 123L;
+book.title = "スベらないプレゼン";
+book.authors = new HashSet<String>();
+book.authors.add("恥 忍");
+book.authors.add("恥 晒");
+book.price = 480;
+book.publishedAt = toDate("2015-3-10 00:00:00");
+book.isbn = "0987654321";
+book.width = 18.2f;
+book.height = 23.0f;
+book.available = false;
+book.review = readUTF8String("/book2.review.txt"); //大きなテキストなど
+book.coverImage = readBytes("/book2.cover.jpg"); //JPEG画像など
 ```
 SimpleDBMapper#save()でSimpleDBに永続化されます。
 
 ```java
-mapper.save(book1);
+mapper.save(book);
 ```
 
 book1のattributeを変更して、再度save()すると、上書き保存されます。（リレーショナルデータベースで言うところのUPDATEになります。） 
 
 ```java
-book1.authors.remove("著者A");
-mapper.save(book1);
+book.authors.remove("恥 晒");
+mapper.save(book);
 ```
 
 SimpleDBに永続化されたPOJOを取得したい場合はやり方が二種類あります。一つはItemNameを指定する方法、もう一つはQueryを投げる方法です。
@@ -236,7 +240,7 @@ while (mapper.hasNext()) {
 削除する場合は、ItemNameに値が入っているPOJOを引数にdelete()を呼びます。
 
 ```java
-mapper.delete(book1);
+mapper.delete(book);
 ```
 
 アイテムのカウントをする事も可能です。条件なしにすべてのアイテムをカウントする方法と条件付きカウントの二種類があります。
