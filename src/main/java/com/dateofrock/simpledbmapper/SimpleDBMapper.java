@@ -589,8 +589,10 @@ public class SimpleDBMapper {
 				List<Attribute> attrs = item.getAttributes();
 				for (Attribute attr : attrs) {
 					String attributeName = attr.getName();
-					Field attrField = clazz.getDeclaredField(attributeName);
-
+					Field attrField = this.refrector.findFieldByAttributeName(clazz, attributeName);
+					if (attrField == null) {
+						continue;
+					}
 					// Blobの場合はLazyFetchをチェック
 					SimpleDBBlob blobAnno = attrField.getAnnotation(SimpleDBBlob.class);
 					if (blobAnno != null) {
@@ -598,13 +600,12 @@ public class SimpleDBMapper {
 						if (this.blobEagerFetchList.contains(fieldName)) {
 							// 実行
 							this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
-							continue;
-						}
-						FetchType fetchType = blobAnno.fetch();
-						if (fetchType == FetchType.EAGER) {
-							// 実行
-							this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
-							continue;
+						} else {
+							FetchType fetchType = blobAnno.fetch();
+							if (fetchType == FetchType.EAGER) {
+								// 実行
+								this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
+							}
 						}
 					} else {
 						this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);

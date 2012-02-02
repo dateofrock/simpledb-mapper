@@ -40,6 +40,33 @@ import com.dateofrock.simpledbmapper.util.IOUtils;
  */
 class Refrector {
 
+	Field findFieldByAttributeName(Class<?> clazz, String attributeName) {
+		Field[] fields = clazz.getDeclaredFields();
+		for (Field field : fields) {
+			// SimpleDBAttribute
+			SimpleDBAttribute attribute = field.getAnnotation(SimpleDBAttribute.class);
+			if (attribute != null) {
+				if (attribute.attributeName().equals(attributeName)) {
+					return field;
+				}
+			}
+			//
+			SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
+			if (blob != null) {
+				if (blob.attributeName().equals(attributeName)) {
+					return field;
+				}
+			}
+			SimpleDBVersionAttribute version = field.getAnnotation(SimpleDBVersionAttribute.class);
+			if (version != null) {
+				if (version.attributeName().equals(attributeName)) {
+					return field;
+				}
+			}
+		}
+		return null;
+	}
+
 	Field findItemNameField(Class<?> clazz) {
 		Field[] fields = clazz.getDeclaredFields();
 		for (Field field : fields) {
