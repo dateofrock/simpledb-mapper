@@ -68,9 +68,11 @@ public class SimpleDBMapperTest {
 	public void setUp() throws Exception {
 		AWSCredentials cred = new PropertiesCredentials(
 				SimpleDBMapperTest.class.getResourceAsStream("/AwsCredentials.properties"));
+		
 		AmazonSimpleDB sdb = new AmazonSimpleDBClient(cred);
 		sdb.setEndpoint(this.simpleDBAPIEndPoint);
 		AmazonS3 s3 = new AmazonS3Client(cred);
+		
 		this.mapper = new SimpleDBMapper(sdb, s3);
 
 		List<Book> allBooks = this.mapper.selectAll(Book.class);
@@ -87,19 +89,9 @@ public class SimpleDBMapperTest {
 		Book fetchedBook = this.mapper.load(Book.class, book1.id);
 		assertBook(book1, fetchedBook);
 
-		String review = book1.review;
-		assertEquals(readUTF8String("/book1.review.txt"), review);
-		byte[] coverImage = book1.coverImage;
-		assertArrayEquals(readBytes("/book1.cover.jpg"), coverImage);
-
 		this.mapper.save(book2);
 		fetchedBook = this.mapper.load(Book.class, book2.id);
 		assertBook(book2, fetchedBook);
-
-		review = book2.review;
-		assertEquals(readUTF8String("/book2.review.txt"), review);
-		coverImage = book2.coverImage;
-		assertArrayEquals(readBytes("/book2.cover.jpg"), coverImage);
 
 		book1.authors.remove("著者A");
 		this.mapper.save(book1);
@@ -185,6 +177,8 @@ public class SimpleDBMapperTest {
 		assertEquals(book.height, fetchedBook.height);
 		assertEquals(book.available, fetchedBook.available);
 		assertEquals(book.version, fetchedBook.version);
+		assertEquals(book.review, fetchedBook.review);
+		assertArrayEquals(book.coverImage, fetchedBook.coverImage);
 	}
 
 	private Date toDate(String value) throws ParseException {

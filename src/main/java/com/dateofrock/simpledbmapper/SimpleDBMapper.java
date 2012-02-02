@@ -248,7 +248,7 @@ public class SimpleDBMapper {
 
 		// S3にアップロード処理
 		List<S3TaskResult> taskFailures = new ArrayList<S3TaskResult>();
-		ExecutorService executor = Executors.newFixedThreadPool(this.config.getS3UploadThreadPoolSize());
+		ExecutorService executor = Executors.newFixedThreadPool(this.config.geS3AccessThreadPoolSize());
 		try {
 			List<Future<S3TaskResult>> futures = executor.invokeAll(uploadTasks);
 			for (Future<S3TaskResult> future : futures) {

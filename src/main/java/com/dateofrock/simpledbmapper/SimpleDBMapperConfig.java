@@ -21,29 +21,38 @@ package com.dateofrock.simpledbmapper;
  */
 public class SimpleDBMapperConfig {
 
-	public static final int S3_UPLOAD_THREAD_POOL_SIZE = 3;
-
-	private int s3UploadThreadPoolSize;
-	private boolean consistentRead;
-
 	public static final SimpleDBMapperConfig DEFAULT;
 
+	public static final int DEFAULT_S3_ACCESS_THREAD_POOL_SIZE = 2;
+	public static final boolean DEFAULT_CONSISTENT_READ = true;
+
+	private int s3AccessThreadPoolSize;
+	private boolean consistentRead;
+
 	static {
-		DEFAULT = new SimpleDBMapperConfig(S3_UPLOAD_THREAD_POOL_SIZE, true);
+		DEFAULT = new SimpleDBMapperConfig();
 	}
 
-	public SimpleDBMapperConfig(int s3UploadThreadPoolSize, boolean consistentRead) {
+	public SimpleDBMapperConfig() {
 		super();
-		this.s3UploadThreadPoolSize = s3UploadThreadPoolSize;
-		this.consistentRead = consistentRead;
+		this.s3AccessThreadPoolSize = DEFAULT_S3_ACCESS_THREAD_POOL_SIZE;
+		this.consistentRead = DEFAULT_CONSISTENT_READ;
 	}
 
-	public int getS3UploadThreadPoolSize() {
-		return s3UploadThreadPoolSize;
+	public int geS3AccessThreadPoolSize() {
+		return s3AccessThreadPoolSize;
+	}
+
+	public void setS3AccessThreadPoolSize(int s3UploadThreadPoolSize) {
+		this.s3AccessThreadPoolSize = s3UploadThreadPoolSize;
 	}
 
 	public boolean isConsistentRead() {
 		return consistentRead;
+	}
+
+	public void setConsistentRead(boolean consistentRead) {
+		this.consistentRead = consistentRead;
 	}
 
 }

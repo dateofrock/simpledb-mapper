@@ -29,7 +29,10 @@ import com.dateofrock.simpledbmapper.SimpleDBVersionAttribute;
  * 
  * @author dateofrock
  */
-@SimpleDBEntity(domainName = "SimpleDBMapper-Book-Testing", s3BucketName = "simpledbmapper-book-testing", s3KeyPrefix = "simpledb-blob")
+@SimpleDBEntity(
+		domainName = "SimpleDBMapper-Book-Testing", 
+		s3BucketName = "simpledbmapper-book-testing", 
+		s3KeyPrefix = "simpledb-blob")
 public class Book {
 
 	@SimpleDBItemName
