@@ -8,7 +8,7 @@
 	<packaging>jar</packaging>
 
 	<name>simpledb-mapper</name>
-	<url>http://maven.apache.org</url>
+	<url>https://github.com/dateofrock/simpledb-mapper</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
