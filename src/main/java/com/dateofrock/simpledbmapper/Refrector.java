@@ -74,6 +74,10 @@ class Refrector {
 		return list;
 	}
 
+	/**
+	 * @throws SimpleDBMappingException
+	 *             SimpleDBEntityアノテーションがない場合
+	 */
 	SimpleDBEntity getEntityAnnotation(Class<?> clazz) {
 		SimpleDBEntity entity = clazz.getAnnotation(SimpleDBEntity.class);
 		if (entity == null) {
@@ -94,31 +98,23 @@ class Refrector {
 		return clazz.getAnnotation(SimpleDBEntity.class).s3KeyPrefix();
 	}
 
-	String findVersionAttributeName(Class<?> clazz) {
-		Field[] fields = clazz.getDeclaredFields();
-		for (Field field : fields) {
-			SimpleDBVersionAttribute versionAttribute = field.getAnnotation(SimpleDBVersionAttribute.class);
-			if (versionAttribute != null) {
-				return versionAttribute.attributeName();
-			}
-		}
-		throw new SimpleDBMappingException(clazz + "は@SimpleDBVersionAttributeアノテーションがありません");
-	}
-
 	<T> void setFieldValueByAttribute(AmazonS3 s3, Class<T> clazz, T instance, Attribute attribute) {
 		String attributeName = attribute.getName();
 		String attributeValue = attribute.getValue();
 
 		// version
-		if (attributeName.equals(this.findVersionAttributeName(clazz))) {
-			Long version = new Long(attributeValue);
-			Field versionField = this.findVersionAttributeField(clazz);
-			try {
-				versionField.set(instance, version);
-			} catch (Exception e) {
-				throw new SimpleDBMappingException("versionセットに失敗", e);
+		Field versionField = this.findVersionAttributeField(clazz);
+		if (versionField != null) {
+			String versionAttributeName = versionField.getAnnotation(SimpleDBVersionAttribute.class).attributeName();
+			if (attributeName.equals(versionAttributeName)) {
+				Long version = new Long(attributeValue);
+				try {
+					versionField.set(instance, version);
+				} catch (Exception e) {
+					throw new SimpleDBMappingException("versionセットに失敗", e);
+				}
+				return;
 			}
-			return;
 		}
 
 		Field[] fields = clazz.getDeclaredFields();

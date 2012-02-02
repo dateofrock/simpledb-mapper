@@ -261,7 +261,8 @@ public class SimpleDBMapper {
 		if (versionField != null) {
 			try {
 				Object versionObject = versionField.get(object);
-				String versionAttributeName = this.refrector.findVersionAttributeName(clazz);
+				String versionAttributeName = versionField.getAnnotation(SimpleDBVersionAttribute.class)
+						.attributeName();
 				if (versionObject != null) {
 					if (versionObject instanceof Long) {
 						Long currentVersion = (Long) versionObject;
@@ -370,7 +371,8 @@ public class SimpleDBMapper {
 		if (versionField != null) {
 			try {
 				Object versionObject = versionField.get(object);
-				String versionAttributeName = this.refrector.findVersionAttributeName(object.getClass());
+				String versionAttributeName = versionField.getAnnotation(SimpleDBVersionAttribute.class)
+						.attributeName();
 				if (versionObject != null) {
 					if (versionObject instanceof Long) {
 						Long currentVersion = (Long) versionObject;

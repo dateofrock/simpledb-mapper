@@ -192,9 +192,9 @@ public class SimpleDBMapperTest {
 		assertEquals(book.width, fetchedBook.width);
 		assertEquals(book.height, fetchedBook.height);
 		assertEquals(book.available, fetchedBook.available);
-		assertEquals(book.version, fetchedBook.version);
 		assertEquals(book.review, fetchedBook.review);
 		assertArrayEquals(book.coverImage, fetchedBook.coverImage);
+		assertEquals(book.version, fetchedBook.version);
 	}
 
 	private Date toDate(String value) throws ParseException {
