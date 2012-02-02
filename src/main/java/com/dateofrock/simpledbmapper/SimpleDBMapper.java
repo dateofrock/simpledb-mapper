@@ -47,6 +47,7 @@ import com.amazonaws.services.simpledb.model.SelectRequest;
 import com.amazonaws.services.simpledb.model.SelectResult;
 import com.amazonaws.services.simpledb.model.UpdateCondition;
 import com.amazonaws.services.simpledb.util.SimpleDBUtils;
+import com.dateofrock.simpledbmapper.SimpleDBBlob.FetchType;
 import com.dateofrock.simpledbmapper.query.QueryExpression;
 import com.dateofrock.simpledbmapper.s3.S3BlobReference;
 import com.dateofrock.simpledbmapper.s3.S3Task;
@@ -67,6 +68,8 @@ public class SimpleDBMapper {
 	private Refrector refrector;
 	private String selectNextToken;
 
+	private List<String> blobEagerFetchList = new ArrayList<String>();
+
 	public SimpleDBMapper(AmazonSimpleDB sdb, AmazonS3 s3) {
 		this.sdb = sdb;
 		this.s3 = s3;
@@ -79,6 +82,31 @@ public class SimpleDBMapper {
 		this.s3 = s3;
 		this.config = config;
 		this.refrector = new Refrector();
+	}
+
+	/**
+	 * TODO
+	 * 
+	 * @param fieldName
+	 */
+	public void addEagerBlobFetch(String fieldName) {
+		this.blobEagerFetchList.add(fieldName);
+	}
+
+	/**
+	 * TODO
+	 * 
+	 * @param fieldName
+	 */
+	public void removeEagerBlobFetch(String fieldName) {
+		this.blobEagerFetchList.remove(fieldName);
+	}
+
+	/**
+	 * TODO
+	 */
+	public void resetEagerBlobFetch() {
+		this.blobEagerFetchList = new ArrayList<String>();
 	}
 
 	/**
@@ -508,7 +536,6 @@ public class SimpleDBMapper {
 		if (objects.isEmpty()) {
 			throw new SimpleDBMapperNotFoundException("見つかりません。" + query);
 		}
-		// FIXME
 		return objects.get(0);
 	}
 
@@ -536,18 +563,14 @@ public class SimpleDBMapper {
 		List<T> objects = new ArrayList<T>();
 
 		Field itemNameField = this.refrector.findItemNameField(clazz);
-		// SDBのitemでループ
-		for (Item item : items) {
-			T instance;
-			try {
+		try {
+			// SDBのitemでループ
+			for (Item item : items) {
+				T instance;
 				instance = clazz.newInstance();
-			} catch (Exception e) {
-				throw new SimpleDBMappingException(e);
-			}
 
-			// ItemNameのセット
-			Class<?> type = itemNameField.getType();
-			try {
+				// ItemNameのセット
+				Class<?> type = itemNameField.getType();
 				String itemName = item.getName();
 				if (this.refrector.isIntegerType(type)) {
 					itemNameField.set(instance, SimpleDBUtils.decodeZeroPaddingInt(itemName));
@@ -561,17 +584,40 @@ public class SimpleDBMapper {
 					// FIXME
 					throw new SimpleDBMappingException("itemNameはStringかIntegerかLong、Floatのどれかである必要があります。");
 				}
-			} catch (Exception e) {
-				throw new SimpleDBMappingException(e);
+
+				// itemのattributesでループ
+				List<Attribute> attrs = item.getAttributes();
+				for (Attribute attr : attrs) {
+					String attributeName = attr.getName();
+					Field attrField = clazz.getDeclaredField(attributeName);
+
+					// Blobの場合はLazyFetchをチェック
+					SimpleDBBlob blobAnno = attrField.getAnnotation(SimpleDBBlob.class);
+					if (blobAnno != null) {
+						String fieldName = attrField.getName();
+						if (this.blobEagerFetchList.contains(fieldName)) {
+							// 実行
+							this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
+							continue;
+						}
+						FetchType fetchType = blobAnno.fetch();
+						if (fetchType == FetchType.EAGER) {
+							// 実行
+							this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
+							continue;
+						}
+					} else {
+						this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
+					}
+
+				}
+
+				//
+				objects.add(instance);
 			}
 
-			// itemのattributesでループ
-			List<Attribute> attrs = item.getAttributes();
-			for (Attribute attr : attrs) {
-				this.refrector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
-			}
-
-			objects.add(instance);
+		} catch (Exception e) {
+			throw new SimpleDBMappingException(e);
 		}
 
 		return objects;

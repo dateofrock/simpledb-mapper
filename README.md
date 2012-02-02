@@ -74,7 +74,7 @@ public class Book {
 	@SimpleDBBlob(attributeName = "review", contentType = "text/plain")
 	public String review;
 
-	@SimpleDBBlob(attributeName = "coverImage", contentType = "image/jpeg")
+	@SimpleDBBlob(attributeName = "coverImage", contentType = "image/jpeg", fetch = FetchType.LAZY)
 	public byte[] coverImage;
 
 	@SimpleDBVersionAttribute
@@ -128,7 +128,28 @@ attributeとして指定できる型は以下に制約されます。
 
 のみです。
 
-なお、S3に保存する際のContent-Typeも指定する事が可能です。
+また、以下を指定する事が可能です。
+
+<dl>
+<dt>contentType</dt><dd>S3に保存する際のContent-Type指定</dd>
+<dt>fetch</dt><dd>S3より随時データを取得するかどうか。デフォルトでは常に取得しますが、パフォーマンスは大幅に落ちます。指定には、FetchType.EAGERかFetchType.LAZYを指定します。simpledb-mapperは、遅延ロードのような機能はサポートしていません。単に取得しないだけです。</dd>
+</dl>
+
+なお、FetchType.LAZYで指定されたフィールドを上書きしてフェッチ対象にするためにはこのようにします。
+
+```java
+mapper.addEagerBlobFetch("coverImage");
+```
+
+フェッチ対象から再度外すにはこのようにします。
+
+```java
+mapper.removeEagerBlobFetch("coverImage");
+//もしくは
+mapper.resetEagerBlobFetch();
+```
+
+
 
 ###@SimpleDBVersionAttribute
 @SimpleDBVersionAttributeアノテーションで指定されたフィールドは、SimpleDBにアイテムをPUT/DELETEする際にトランザクション制御（楽観的ロック）を実現するためのフィールドになります。このフィールドはsimpledb-mapperが内部的に使用するものです。この指定は必須ではありません。

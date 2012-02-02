@@ -38,4 +38,10 @@ public @interface SimpleDBBlob {
 	String attributeName();
 
 	String contentType() default "";
+
+	FetchType fetch() default FetchType.EAGER;
+
+	public enum FetchType {
+		EAGER, LAZY;
+	}
 }

@@ -20,6 +20,7 @@ import java.util.Set;
 
 import com.dateofrock.simpledbmapper.SimpleDBAttribute;
 import com.dateofrock.simpledbmapper.SimpleDBBlob;
+import com.dateofrock.simpledbmapper.SimpleDBBlob.FetchType;
 import com.dateofrock.simpledbmapper.SimpleDBEntity;
 import com.dateofrock.simpledbmapper.SimpleDBItemName;
 import com.dateofrock.simpledbmapper.SimpleDBVersionAttribute;
@@ -62,7 +63,7 @@ public class Book {
 	@SimpleDBBlob(attributeName = "review", contentType = "text/plain")
 	public String review;
 
-	@SimpleDBBlob(attributeName = "coverImage", contentType = "image/jpeg")
+	@SimpleDBBlob(attributeName = "coverImage", contentType = "image/jpeg", fetch = FetchType.LAZY)
 	public byte[] coverImage;
 
 	@SimpleDBVersionAttribute

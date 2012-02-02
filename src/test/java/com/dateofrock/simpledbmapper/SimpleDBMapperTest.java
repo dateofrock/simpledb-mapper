@@ -88,20 +88,33 @@ public class SimpleDBMapperTest {
 	@Test
 	public void test() throws Exception {
 		Book book1 = newBook1(1000L);
-		Book book2 = newBook2(2000L);
 		this.mapper.save(book1);
 
 		Book fetchedBook = this.mapper.load(Book.class, book1.id);
-		assertBook(book1, fetchedBook);
+		assertBook(book1, fetchedBook, false);
 
+		this.mapper.addEagerBlobFetch("coverImage");
+		fetchedBook = this.mapper.load(Book.class, book1.id);
+		assertBook(book1, fetchedBook, true);
+
+		Book book2 = newBook2(2000L);
 		this.mapper.save(book2);
+
+		this.mapper.resetEagerBlobFetch();
+
 		fetchedBook = this.mapper.load(Book.class, book2.id);
-		assertBook(book2, fetchedBook);
+		assertBook(book2, fetchedBook, false);
+
+		this.mapper.addEagerBlobFetch("coverImage");
+		fetchedBook = this.mapper.load(Book.class, book2.id);
+		assertBook(book2, fetchedBook, true);
+
+		this.mapper.removeEagerBlobFetch("coverImage");
 
 		book2.authors.remove("恥 晒");
 		this.mapper.save(book2);
 		fetchedBook = this.mapper.load(Book.class, book2.id);
-		assertBook(book2, fetchedBook);
+		assertBook(book2, fetchedBook, false);
 
 		QueryExpression expression = new QueryExpression(new Condition("title", Equals, "ドン引きの美学"));
 		int count = this.mapper.count(Book.class, expression);
@@ -116,16 +129,17 @@ public class SimpleDBMapperTest {
 		Sort sort = new Sort(Ordering.ASC, "publishedAt");
 		expression.setSort(sort);
 
+		this.mapper.addEagerBlobFetch("coverImage");
 		List<Book> books = this.mapper.select(Book.class, expression);
-		assertBook(book1, books.get(0));
-		assertBook(book2, books.get(1));
+		assertBook(book1, books.get(0), true);
+		assertBook(book2, books.get(1), true);
 
 		sort = new Sort(Ordering.DESC, "publishedAt");
 		expression.setSort(sort);
 
 		books = this.mapper.select(Book.class, expression);
-		assertBook(book1, books.get(1));
-		assertBook(book2, books.get(0));
+		assertBook(book1, books.get(1), true);
+		assertBook(book2, books.get(0), true);
 
 		expression = new QueryExpression(new Condition("publishedAt", ComparisonOperator.GreaterThan,
 				toDate("2000-1-1 00:00:00")));
@@ -134,8 +148,8 @@ public class SimpleDBMapperTest {
 		sort = new Sort(Ordering.ASC, "publishedAt");
 		expression.setSort(sort);
 		books = this.mapper.select(Book.class, expression);
-		assertBook(book1, books.get(0));
-		assertBook(book2, books.get(1));
+		assertBook(book1, books.get(0), true);
+		assertBook(book2, books.get(1), true);
 
 		this.mapper.delete(book1);
 		count = this.mapper.countAll(Book.class);
@@ -182,7 +196,7 @@ public class SimpleDBMapperTest {
 		}
 	}
 
-	private void assertBook(Book book, Book fetchedBook) {
+	private void assertBook(Book book, Book fetchedBook, boolean withCoverImage) {
 		assertEquals(book.id, fetchedBook.id);
 		assertEquals(book.isbn, fetchedBook.isbn);
 		assertEquals(book.price, fetchedBook.price);
@@ -193,7 +207,9 @@ public class SimpleDBMapperTest {
 		assertEquals(book.height, fetchedBook.height);
 		assertEquals(book.available, fetchedBook.available);
 		assertEquals(book.review, fetchedBook.review);
-		assertArrayEquals(book.coverImage, fetchedBook.coverImage);
+		if (withCoverImage) {
+			assertArrayEquals(book.coverImage, fetchedBook.coverImage);
+		}
 		assertEquals(book.version, fetchedBook.version);
 	}
 
