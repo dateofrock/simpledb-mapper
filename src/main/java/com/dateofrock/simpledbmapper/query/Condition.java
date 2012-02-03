@@ -77,6 +77,8 @@ public class Condition {
 		} else if (this.attributeValue instanceof Long) {
 			expression.append(SimpleDBUtils.encodeZeroPadding((Long) this.attributeValue,
 					SimpleDBEntity.MAX_NUMBER_DIGITS));
+		} else if (this.attributeValue instanceof Boolean) {
+			expression.append(String.valueOf(this.attributeValue));
 		} else {
 			throw new SimpleDBMappingException("attributeValueの型が非サポートです。" + this.attributeValue);
 		}

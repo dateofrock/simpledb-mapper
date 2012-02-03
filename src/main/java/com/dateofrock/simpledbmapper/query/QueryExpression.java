@@ -16,8 +16,10 @@
 package com.dateofrock.simpledbmapper.query;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import com.dateofrock.simpledbmapper.SimpleDBEntity;
@@ -32,25 +34,31 @@ public class QueryExpression {
 
 	private Condition defaultCondition;
 
-	private Map<String, Condition> conditions;
+	private List<Map<String, Condition>> conditions;
 	private Sort sort;
 	private int limit;
 
 	public QueryExpression(Condition condition) {
 		this.defaultCondition = condition;
-		this.conditions = new TreeMap<String, Condition>();
+		this.conditions = new ArrayList<Map<String, Condition>>();
 	}
 
 	public void addAndCondtion(Condition condition) {
-		this.conditions.put("and", condition);
+		Map<String, Condition> cond = new HashMap<String, Condition>();
+		cond.put("and", condition);
+		this.conditions.add(cond);
 	}
 
 	public void addOrCondition(Condition condition) {
-		this.conditions.put("or", condition);
+		Map<String, Condition> cond = new HashMap<String, Condition>();
+		cond.put("or", condition);
+		this.conditions.add(cond);
 	}
 
 	public void addIntersectionCondition(Condition condition) {
-		this.conditions.put("intersection", condition);
+		Map<String, Condition> cond = new HashMap<String, Condition>();
+		cond.put("intersection", condition);
+		this.conditions.add(cond);
 	}
 
 	public void setSort(Sort sort) {
@@ -84,11 +92,14 @@ public class QueryExpression {
 		expression.append(this.defaultCondition.expression()).append(" ");
 		attributeNames.add(this.defaultCondition.getAttributeName());
 
-		for (String key : this.conditions.keySet()) {
-			expression.append(key).append(" ");
-			Condition condition = this.conditions.get(key);
-			expression.append(condition.expression());
-			attributeNames.add(condition.getAttributeName());
+		for (Map<String, Condition> conditionMap : this.conditions) {
+			for (String key : conditionMap.keySet()) {
+				expression.append(key).append(" ");
+				Condition condition = conditionMap.get(key);
+				expression.append(condition.expression());
+				expression.append(" ");
+				attributeNames.add(condition.getAttributeName());
+			}
 		}
 
 		if (this.sort != null) {
