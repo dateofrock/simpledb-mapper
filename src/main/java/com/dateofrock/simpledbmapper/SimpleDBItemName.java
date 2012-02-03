@@ -15,6 +15,7 @@
  */
 package com.dateofrock.simpledbmapper;
 
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -31,6 +32,7 @@ import java.lang.annotation.RetentionPolicy;
  * 
  * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
+@Inherited
 @Retention(RetentionPolicy.RUNTIME)
 public @interface SimpleDBItemName {
 
