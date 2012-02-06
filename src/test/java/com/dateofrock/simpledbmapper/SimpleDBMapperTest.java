@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import model.Book;
+import model.BookSubClass;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -50,14 +51,14 @@ import com.dateofrock.simpledbmapper.util.IOUtils;
 /**
  * 注意：このテストを実行すると、実際にSimpleDB/S3にアクセスします。
  * 
- * APIのエンドポイントは {@link SimpleDBMapperTest#simpleDBAPIEndPoint}で設定します。 ドメインは
- * {@link Book#id}の{@link SimpleDBItemName}アノテーションで指定されています。Blob用のS3バケットは
- * {@link Book#review}と{@link Book#coverImage}に{@link SimpleDBBlob}
- * アノテーションで指定されています。
+ * <h3>テストを実行するにあたって</h3> 実際にAWSにアクセスを行いますので、以下の点に注意してください。
+ * <ul>
+ * <li>わずかながら課金される</li>
+ * <li>SimpleDBのドメインやS3バケット内データが上書き・消去される</li>
+ * </ul>
  * 
- * これらの値を書き換えない場合は、最悪実在するSimpleDBのドメインやS3バケットの上書きをしてしまう可能性があるのでご注意ください。
  * 
- * @author dateofrock
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
 public class SimpleDBMapperTest {
 
@@ -158,6 +159,19 @@ public class SimpleDBMapperTest {
 		this.mapper.delete(book2);
 		count = this.mapper.countAll(Book.class);
 		assertEquals(0, count);
+
+		BookSubClass subBook = new BookSubClass();
+		subBook.id = 123456L;
+		subBook.title = "クラウド入門";
+		subBook.authors = new HashSet<String>();
+		subBook.authors.add("すごい著者");
+		subBook.tags = new HashSet<String>();
+		subBook.tags.add("Java");
+		subBook.tags.add("AWS");
+		subBook.tags.add("Ruby");
+		subBook.tags.add("Cloud");
+
+		this.mapper.save(subBook);
 
 	}
 

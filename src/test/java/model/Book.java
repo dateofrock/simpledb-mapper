@@ -28,9 +28,9 @@ import com.dateofrock.simpledbmapper.SimpleDBVersionAttribute;
 /**
  * テスト用モデル
  * 
- * @author dateofrock
+ * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-@SimpleDBEntity(domainName = "SimpleDBMapper-Book-Testing", s3BucketName = "simpledbmapper-book-testing", s3KeyPrefix = "simpledb-blob/")
+@SimpleDBEntity(domainName = "SimpleDBMapper-Book", s3BucketName = "dateofrock-testing", s3KeyPrefix = "simpledb-mapper/")
 public class Book {
 
 	@SimpleDBItemName
