@@ -41,7 +41,7 @@ public class Sort {
 		return this.attributeName;
 	}
 
-	String stringExpression() {
+	public String describe() {
 		StringBuilder expression = new StringBuilder("order by ");
 		if (this.attributeName.equalsIgnoreCase("itemName()")) {
 			expression.append(this.attributeName);

@@ -39,7 +39,7 @@ mapper.createDomain(Book.class);
 SimpleDBに永続化したいモデルをPOJOとして表現し、そこにsimpledb-mapperが用意してあるアノテーションを付け加えます。以下、サンプルとしてBookというPOJOを例に解説します。
 
 ```java
-@SimpleDBEntity(
+@SimpleDBDomain(
 		domainName = "SimpleDBMapper-Book-Testing", 
 		s3BucketName = "simpledbmapper-book-testing", 
 		s3KeyPrefix = "simpledb-blob/")
@@ -83,7 +83,7 @@ public class Book {
 ```
 
 
-### @SimpleDBEntity
+### @SimpleDBDomain
 永続化したいPOJOの指定です。
 
 <dl>
@@ -176,7 +176,7 @@ Mavenのリポジトリを用意してありますので、pom.xmlに以下の�
 	<dependency>
 		<groupId>com.dateofrock.aws</groupId>
 		<artifactId>simpledb-mapper</artifactId>
-		<version>0.6-SNAPSHOT</version>
+		<version>0.7-SNAPSHOT</version>
 	</dependency>
 </dependencies>
 ```

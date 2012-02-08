@@ -126,8 +126,8 @@ class Reflector {
 	 * @throws SimpleDBMappingException
 	 *             SimpleDBEntityアノテーションがない場合
 	 */
-	SimpleDBEntity getEntityAnnotation(Class<?> clazz) {
-		SimpleDBEntity entity = clazz.getAnnotation(SimpleDBEntity.class);
+	SimpleDBDomain getEntityAnnotation(Class<?> clazz) {
+		SimpleDBDomain entity = clazz.getAnnotation(SimpleDBDomain.class);
 		if (entity == null) {
 			throw new SimpleDBMappingException(clazz + "は@SimpleDBEntityアノテーションがありません");
 		}
@@ -139,11 +139,11 @@ class Reflector {
 	}
 
 	String findS3BucketName(Class<?> clazz) {
-		return clazz.getAnnotation(SimpleDBEntity.class).s3BucketName();
+		return clazz.getAnnotation(SimpleDBDomain.class).s3BucketName();
 	}
 
 	String findS3KeyPrefix(Class<?> clazz) {
-		return clazz.getAnnotation(SimpleDBEntity.class).s3KeyPrefix();
+		return clazz.getAnnotation(SimpleDBDomain.class).s3KeyPrefix();
 	}
 
 	<T> void setFieldValueByAttribute(AmazonS3 s3, Class<T> clazz, T instance, Attribute attribute) {
@@ -268,11 +268,11 @@ class Reflector {
 		if (object instanceof String) {// String
 			itemNameInQuery = (String) object;
 		} else if (object instanceof Integer) {// Integer
-			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Integer) object, SimpleDBEntity.MAX_NUMBER_DIGITS);
+			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Integer) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
 		} else if (object instanceof Long) {// Long
-			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Long) object, SimpleDBEntity.MAX_NUMBER_DIGITS);
+			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Long) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
 		} else if (object instanceof Float) {// Float
-			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Float) object, SimpleDBEntity.MAX_NUMBER_DIGITS);
+			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Float) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
 		} else {
 			throw new SimpleDBMappingException("itemNameはStringかIntegerかLong、Floatのどれかである必要があります。" + object);
 		}
@@ -287,13 +287,13 @@ class Reflector {
 				itemName = (String) itemNameField.get(object);
 			} else if (isIntegerType(itemNameType)) {
 				itemName = SimpleDBUtils.encodeZeroPadding((Integer) itemNameField.get(object),
-						SimpleDBEntity.MAX_NUMBER_DIGITS);
+						SimpleDBDomain.MAX_NUMBER_DIGITS);
 			} else if (isFloatType(itemNameType)) {
 				itemName = SimpleDBUtils.encodeZeroPadding((Float) itemNameField.get(object),
-						SimpleDBEntity.MAX_NUMBER_DIGITS);
+						SimpleDBDomain.MAX_NUMBER_DIGITS);
 			} else if (isLongType(itemNameType)) {
 				itemName = SimpleDBUtils.encodeZeroPadding((Long) itemNameField.get(object),
-						SimpleDBEntity.MAX_NUMBER_DIGITS);
+						SimpleDBDomain.MAX_NUMBER_DIGITS);
 			} else {
 				throw new SimpleDBMappingException(itemNameField + "はサポートしていない型です。");
 			}

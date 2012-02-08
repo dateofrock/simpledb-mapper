@@ -15,6 +15,9 @@
  */
 package com.dateofrock.simpledbmapper;
 
+import static com.amazonaws.services.simpledb.util.SimpleDBUtils.*;
+import static com.dateofrock.simpledbmapper.SimpleDBDomain.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -46,9 +49,9 @@ import com.amazonaws.services.simpledb.model.ReplaceableAttribute;
 import com.amazonaws.services.simpledb.model.SelectRequest;
 import com.amazonaws.services.simpledb.model.SelectResult;
 import com.amazonaws.services.simpledb.model.UpdateCondition;
-import com.amazonaws.services.simpledb.util.SimpleDBUtils;
 import com.dateofrock.simpledbmapper.SimpleDBBlob.FetchType;
 import com.dateofrock.simpledbmapper.query.QueryExpression;
+import com.dateofrock.simpledbmapper.query.QueryExpressionBuilder;
 import com.dateofrock.simpledbmapper.s3.S3BlobReference;
 import com.dateofrock.simpledbmapper.s3.S3Task;
 import com.dateofrock.simpledbmapper.s3.S3TaskResult;
@@ -84,27 +87,15 @@ public class SimpleDBMapper {
 		this.reflector = new Reflector();
 	}
 
-	/**
-	 * TODO
-	 * 
-	 * @param fieldName
-	 */
 	public void addEagerBlobFetch(String fieldName) {
 		this.blobEagerFetchList.add(fieldName);
 	}
 
-	/**
-	 * TODO
-	 * 
-	 * @param fieldName
-	 */
 	public void removeEagerBlobFetch(String fieldName) {
 		this.blobEagerFetchList.remove(fieldName);
 	}
 
-	/**
-	 * TODO
-	 */
+	@Deprecated
 	public void resetEagerBlobFetch() {
 		this.blobEagerFetchList = new ArrayList<String>();
 	}
@@ -144,7 +135,7 @@ public class SimpleDBMapper {
 	 * オブジェクトをSimpleDBに保存します。
 	 * 
 	 * @param object
-	 *            {@link SimpleDBEntity}アノテーションがついたPOJO。
+	 *            {@link SimpleDBDomain}アノテーションがついたPOJO。
 	 *            {@link SimpleDBVersionAttribute}
 	 *            がついたフィールドがある場合、トランザクション機能が働きます。（<a href=
 	 *            "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/ConditionalPut.html"
@@ -198,30 +189,30 @@ public class SimpleDBMapper {
 				Set<?> c = (Set<?>) sdbValue;
 				for (Object val : c) {
 					if (val instanceof Integer) {
-						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
-								(Integer) val, SimpleDBEntity.MAX_NUMBER_DIGITS), true));
+						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Integer) val,
+								MAX_NUMBER_DIGITS), true));
 					} else if (val instanceof Float) {
-						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
-								(Float) val, SimpleDBEntity.MAX_NUMBER_DIGITS), true));
+						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Float) val,
+								MAX_NUMBER_DIGITS), true));
 					} else if (val instanceof Long) {
-						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
-								(Long) val, SimpleDBEntity.MAX_NUMBER_DIGITS), true));
+						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Long) val,
+								MAX_NUMBER_DIGITS), true));
 					} else if (val instanceof String) {
 						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, (String) val, true));
 					}
 				}
 			} else if (sdbValue instanceof Date) {// Date
 				Date d = (Date) sdbValue;
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeDate(d), true));
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeDate(d), true));
 			} else if (sdbValue instanceof Integer) {// Integer or int
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
-						(Integer) sdbValue, SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Integer) sdbValue,
+						MAX_NUMBER_DIGITS), true));
 			} else if (sdbValue instanceof Float) {// Float or float
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
-						(Float) sdbValue, SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Float) sdbValue,
+						MAX_NUMBER_DIGITS), true));
 			} else if (sdbValue instanceof Long) {// Long or long
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, SimpleDBUtils.encodeZeroPadding(
-						(Long) sdbValue, SimpleDBEntity.MAX_NUMBER_DIGITS).toString(), true));
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Long) sdbValue,
+						MAX_NUMBER_DIGITS), true));
 			} else if (sdbValue instanceof String) {// String
 				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, (String) sdbValue, true));
 			} else if (sdbValue instanceof Boolean) {// Boolean or boolean
@@ -366,7 +357,7 @@ public class SimpleDBMapper {
 	 * オブジェクトをSimpleDBから削除します
 	 * 
 	 * @param object
-	 *            {@link SimpleDBEntity}アノテーションがついたPOJO
+	 *            {@link SimpleDBDomain}アノテーションがついたPOJO
 	 *            {@link SimpleDBVersionAttribute}
 	 *            がついたフィールドがある場合、トランザクション機能が働きます。（<a href=
 	 *            "http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/ConditionalDelete.html"
@@ -426,10 +417,10 @@ public class SimpleDBMapper {
 	}
 
 	/**
-	 * {@link SimpleDBEntity}で指定されたドメイン内のアイテムをすべてカウントします。
+	 * {@link SimpleDBDomain}で指定されたドメイン内のアイテムをすべてカウントします。
 	 * 
 	 * @param clazz
-	 *            {@link SimpleDBEntity}アノテーションがついたPOJO
+	 *            {@link SimpleDBDomain}アノテーションがついたPOJO
 	 * @param consistentRead
 	 *            一貫性読み込みオプション。
 	 * 
@@ -442,10 +433,10 @@ public class SimpleDBMapper {
 	}
 
 	/**
-	 * {@link SimpleDBEntity}で指定されたドメイン内のアイテムを条件カウントします。
+	 * {@link SimpleDBDomain}で指定されたドメイン内のアイテムを条件カウントします。
 	 * 
 	 * @param clazz
-	 *            {@link SimpleDBEntity}アノテーションがついたPOJO
+	 *            {@link SimpleDBDomain}アノテーションがついたPOJO
 	 * @param expression
 	 *            where文
 	 * @param consistentRead
@@ -458,7 +449,7 @@ public class SimpleDBMapper {
 	public <T> int count(Class<T> clazz, QueryExpression expression) {
 		String whereExpression = null;
 		if (expression != null) {
-			whereExpression = expression.whereExpressionString();
+			whereExpression = expression.describe();
 		}
 		String query = createQuery(clazz, true, whereExpression, 0);
 		SelectResult result = this.sdb.select(new SelectRequest(query, this.config.isConsistentRead()));
@@ -474,7 +465,7 @@ public class SimpleDBMapper {
 	 * >AWSドキュメント参照</a>
 	 * 
 	 * @param clazz
-	 *            {@link SimpleDBEntity}アノテーションがついたPOJO
+	 *            {@link SimpleDBDomain}アノテーションがついたPOJO
 	 * @param consistentRead
 	 *            一貫性読み込みオプション。
 	 * 
@@ -484,7 +475,7 @@ public class SimpleDBMapper {
 	 * @return 0件の場合は空のListが返ってきます。
 	 */
 	public <T> List<T> selectAll(Class<T> clazz) {
-		String query = createQuery(clazz, false, null, SimpleDBEntity.MAX_QUERY_LIMIT);
+		String query = createQuery(clazz, false, null, MAX_QUERY_LIMIT);
 		List<T> objects = fetch(clazz, query);
 		return objects;
 	}
@@ -497,7 +488,7 @@ public class SimpleDBMapper {
 	 * >AWSドキュメント参照</a>
 	 * 
 	 * @param clazz
-	 *            {@link SimpleDBEntity}アノテーションがついたPOJO
+	 *            {@link SimpleDBDomain}アノテーションがついたPOJO
 	 * @param expression
 	 *            where文
 	 * @param consistentRead
@@ -509,7 +500,7 @@ public class SimpleDBMapper {
 	 * @return 0件の場合は空のListが返ってきます。
 	 */
 	public <T> List<T> select(Class<T> clazz, QueryExpression expression) {
-		String whereExpression = expression.whereExpressionString();
+		String whereExpression = expression.describe();
 		String query = createQuery(clazz, false, whereExpression, expression.getLimit());
 		List<T> objects = fetch(clazz, query);
 		return objects;
@@ -517,7 +508,7 @@ public class SimpleDBMapper {
 
 	/**
 	 * @param clazz
-	 *            {@link SimpleDBEntity}アノテーションがついたPOJO
+	 *            {@link SimpleDBDomain}アノテーションがついたPOJO
 	 * @param itemName
 	 *            SimpleDBのitemNameで、{@link SimpleDBItemName}で指定した型のオブジェクト
 	 * @param consistentRead
@@ -530,7 +521,7 @@ public class SimpleDBMapper {
 	public <T> T load(Class<T> clazz, Object itemName) throws SimpleDBMapperNotFoundException {
 		String itemNameInQuery = this.reflector.formattedString(itemName);
 
-		String whereExpression = "itemName()=" + SimpleDBUtils.quoteValue(itemNameInQuery);
+		String whereExpression = "itemName()=" + quoteValue(itemNameInQuery);
 		String query = createQuery(clazz, false, whereExpression, 0);
 
 		List<T> objects = fetch(clazz, query);
@@ -574,11 +565,11 @@ public class SimpleDBMapper {
 				Class<?> type = itemNameField.getType();
 				String itemName = item.getName();
 				if (this.reflector.isIntegerType(type)) {
-					itemNameField.set(instance, SimpleDBUtils.decodeZeroPaddingInt(itemName));
+					itemNameField.set(instance, decodeZeroPaddingInt(itemName));
 				} else if (this.reflector.isFloatType(type)) {
-					itemNameField.set(instance, SimpleDBUtils.decodeZeroPaddingFloat(itemName));
+					itemNameField.set(instance, decodeZeroPaddingFloat(itemName));
 				} else if (this.reflector.isLongType(type)) {
-					itemNameField.set(instance, SimpleDBUtils.decodeZeroPaddingLong(itemName));
+					itemNameField.set(instance, decodeZeroPaddingLong(itemName));
 				} else if (this.reflector.isStringType(type)) {
 					itemNameField.set(instance, itemName);
 				} else {
@@ -634,7 +625,7 @@ public class SimpleDBMapper {
 			query.append("*");
 		}
 		query.append(" from ");
-		query.append(SimpleDBUtils.quoteName(domainName));
+		query.append(quoteName(domainName));
 		if (whereExpression != null) {
 			query.append(" where ");
 			query.append(whereExpression);
@@ -643,6 +634,10 @@ public class SimpleDBMapper {
 			query.append(" limit ").append(limit);
 		}
 		return query.toString();
+	}
+
+	public <T> QueryExpressionBuilder<T> from(Class<T> clazz) {
+		return new QueryExpressionBuilder<T>(clazz, this);
 	}
 
 }

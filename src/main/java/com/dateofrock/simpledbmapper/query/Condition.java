@@ -15,10 +15,11 @@
  */
 package com.dateofrock.simpledbmapper.query;
 
+import static com.amazonaws.services.simpledb.util.SimpleDBUtils.*;
+import static com.dateofrock.simpledbmapper.SimpleDBDomain.*;
+
 import java.util.Date;
 
-import com.amazonaws.services.simpledb.util.SimpleDBUtils;
-import com.dateofrock.simpledbmapper.SimpleDBEntity;
 import com.dateofrock.simpledbmapper.SimpleDBMappingException;
 
 /**
@@ -42,12 +43,12 @@ public class Condition {
 		return this.attributeName;
 	}
 
-	String expression() {
+	public String describe() {
 		StringBuilder expression = new StringBuilder();
 		if (this.attributeName.equalsIgnoreCase("itemName()")) {
 			expression.append(this.attributeName);
 		} else {
-			expression.append(SimpleDBUtils.quoteName(this.attributeName));
+			expression.append(quoteName(this.attributeName));
 		}
 
 		expression.append(" ").append(this.comparisonOperator.getValue()).append(" ");
@@ -67,16 +68,13 @@ public class Condition {
 		if (this.attributeValue instanceof String) {
 			expression.append((String) this.attributeValue);
 		} else if (this.attributeValue instanceof Date) {
-			expression.append(SimpleDBUtils.encodeDate((Date) this.attributeValue));
+			expression.append(encodeDate((Date) this.attributeValue));
 		} else if (this.attributeValue instanceof Integer) {
-			expression.append(SimpleDBUtils.encodeZeroPadding((Integer) this.attributeValue,
-					SimpleDBEntity.MAX_NUMBER_DIGITS));
+			expression.append(encodeZeroPadding((Integer) this.attributeValue, MAX_NUMBER_DIGITS));
 		} else if (this.attributeValue instanceof Float) {
-			expression.append(SimpleDBUtils.encodeZeroPadding((Float) this.attributeValue,
-					SimpleDBEntity.MAX_NUMBER_DIGITS));
+			expression.append(encodeZeroPadding((Float) this.attributeValue, MAX_NUMBER_DIGITS));
 		} else if (this.attributeValue instanceof Long) {
-			expression.append(SimpleDBUtils.encodeZeroPadding((Long) this.attributeValue,
-					SimpleDBEntity.MAX_NUMBER_DIGITS));
+			expression.append(encodeZeroPadding((Long) this.attributeValue, MAX_NUMBER_DIGITS));
 		} else if (this.attributeValue instanceof Boolean) {
 			expression.append(String.valueOf(this.attributeValue));
 		} else {

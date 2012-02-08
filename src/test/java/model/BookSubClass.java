@@ -17,14 +17,14 @@ package model;
 
 import java.util.Set;
 
-import com.dateofrock.simpledbmapper.SimpleDBEntity;
+import com.dateofrock.simpledbmapper.SimpleDBDomain;
 
 /**
  * テスト用モデル
  * 
  * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-@SimpleDBEntity(domainName = "SimpleDBMapper-Book", s3BucketName = "dateofrock-testing", s3KeyPrefix = "simpledb-mapper/")
+@SimpleDBDomain(domainName = "SimpleDBMapper-Book", s3BucketName = "dateofrock-testing", s3KeyPrefix = "simpledb-mapper/")
 public class BookSubClass extends Book {
 
 	public Set<String> tags;

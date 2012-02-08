@@ -21,7 +21,7 @@ import java.util.Set;
 import com.dateofrock.simpledbmapper.SimpleDBAttribute;
 import com.dateofrock.simpledbmapper.SimpleDBBlob;
 import com.dateofrock.simpledbmapper.SimpleDBBlob.FetchType;
-import com.dateofrock.simpledbmapper.SimpleDBEntity;
+import com.dateofrock.simpledbmapper.SimpleDBDomain;
 import com.dateofrock.simpledbmapper.SimpleDBItemName;
 import com.dateofrock.simpledbmapper.SimpleDBVersionAttribute;
 
@@ -30,7 +30,7 @@ import com.dateofrock.simpledbmapper.SimpleDBVersionAttribute;
  * 
  * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-@SimpleDBEntity(domainName = "SimpleDBMapper-Book", s3BucketName = "dateofrock-testing", s3KeyPrefix = "simpledb-mapper/")
+@SimpleDBDomain(domainName = "SimpleDBMapper-Book", s3BucketName = "dateofrock-testing", s3KeyPrefix = "simpledb-mapper/")
 public class Book {
 
 	@SimpleDBItemName

@@ -15,10 +15,9 @@
  */
 package com.dateofrock.simpledbmapper;
 
-import static com.dateofrock.simpledbmapper.query.ComparisonOperator.Equals;
-import static com.dateofrock.simpledbmapper.query.ComparisonOperator.Like;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static com.dateofrock.simpledbmapper.query.ComparisonOperator.*;
+import static com.dateofrock.simpledbmapper.query.Ordering.*;
+import static org.junit.Assert.*;
 
 import java.io.InputStream;
 import java.text.ParseException;
@@ -121,32 +120,41 @@ public class SimpleDBMapperTest {
 		int count = this.mapper.count(Book.class, expression);
 		assertEquals(1, count);
 
+		count = this.mapper.from(Book.class).where("title", Equals, "ドン引きの美学").count();
+		assertEquals(1, count);
+
 		expression = new QueryExpression(new Condition("title", Like, "%美学"));
 		count = this.mapper.count(Book.class, expression);
 		assertEquals(1, count);
 
-		expression = new QueryExpression(new Condition("publishedAt", ComparisonOperator.GreaterThan,
-				toDate("2000-1-1 00:00:00")));
+		expression = new QueryExpression(new Condition("publishedAt", GreaterThan, toDate("2000-1-1 00:00:00")));
 		Sort sort = new Sort(Ordering.ASC, "publishedAt");
 		expression.setSort(sort);
-
 		this.mapper.addEagerBlobFetch("coverImage");
 		List<Book> books = this.mapper.select(Book.class, expression);
 		assertBook(book1, books.get(0), true);
 		assertBook(book2, books.get(1), true);
 
-		sort = new Sort(Ordering.DESC, "publishedAt");
+		books = this.mapper.from(Book.class).where("publishedAt", GreaterThan, toDate("2000-1-1 00:00:00"))
+				.orderBy("publishedAt").eagerBlobFetch("coverImage", "review").fetch();
+		assertBook(book1, books.get(0), true);
+		assertBook(book2, books.get(1), true);
+
+		sort = new Sort(DESC, "publishedAt");
 		expression.setSort(sort);
 
 		books = this.mapper.select(Book.class, expression);
 		assertBook(book1, books.get(1), true);
 		assertBook(book2, books.get(0), true);
 
-		expression = new QueryExpression(new Condition("publishedAt", ComparisonOperator.GreaterThan,
-				toDate("2000-1-1 00:00:00")));
-		expression
-				.addAndCondtion(new Condition("publishedAt", ComparisonOperator.LessThan, toDate("2100-1-1 00:00:00")));
-		sort = new Sort(Ordering.ASC, "publishedAt");
+		books = this.mapper.from(Book.class).where("publishedAt", GreaterThan, toDate("2000-1-1 00:00:00"))
+				.orderBy("publishedAt", DESC).limit(10).fetch();
+		assertBook(book1, books.get(1), true);
+		assertBook(book2, books.get(0), true);
+
+		expression = new QueryExpression(new Condition("publishedAt", GreaterThan, toDate("2000-1-1 00:00:00")));
+		expression.addAndCondtion(new Condition("publishedAt", LessThan, toDate("2100-1-1 00:00:00")));
+		sort = new Sort(ASC, "publishedAt");
 		expression.setSort(sort);
 		books = this.mapper.select(Book.class, expression);
 		assertBook(book1, books.get(0), true);

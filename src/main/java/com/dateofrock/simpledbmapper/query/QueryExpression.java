@@ -19,10 +19,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
 
-import com.dateofrock.simpledbmapper.SimpleDBEntity;
+import com.dateofrock.simpledbmapper.SimpleDBDomain;
 import com.dateofrock.simpledbmapper.SimpleDBMappingException;
 
 /**
@@ -68,13 +66,13 @@ public class QueryExpression {
 	/**
 	 * @param limit
 	 *            戻り値の最大数。SimpleDBの制限より設定できる最大値は2500（
-	 *            {@link SimpleDBEntity#MAX_QUERY_LIMIT}）になります。
+	 *            {@link SimpleDBDomain#MAX_QUERY_LIMIT}）になります。
 	 */
 	public void setLimit(int limit) {
 		if (limit < 0) {
 			throw new IllegalArgumentException("limitは1以上である必要があります");
 		}
-		if (limit > SimpleDBEntity.MAX_QUERY_LIMIT) {
+		if (limit > SimpleDBDomain.MAX_QUERY_LIMIT) {
 			String message = String.format("SimpleDBでサポートされる最大Limit数は2500です。指定されたlimit(=%s)は多すぎます。", limit);
 			throw new IllegalArgumentException(message);
 		}
@@ -85,18 +83,18 @@ public class QueryExpression {
 		return this.limit;
 	}
 
-	public String whereExpressionString() {
+	public String describe() {
 		List<String> attributeNames = new ArrayList<String>();
 
 		StringBuilder expression = new StringBuilder();
-		expression.append(this.defaultCondition.expression()).append(" ");
+		expression.append(this.defaultCondition.describe()).append(" ");
 		attributeNames.add(this.defaultCondition.getAttributeName());
 
 		for (Map<String, Condition> conditionMap : this.conditions) {
 			for (String key : conditionMap.keySet()) {
 				expression.append(key).append(" ");
 				Condition condition = conditionMap.get(key);
-				expression.append(condition.expression());
+				expression.append(condition.describe());
 				expression.append(" ");
 				attributeNames.add(condition.getAttributeName());
 			}
@@ -107,7 +105,7 @@ public class QueryExpression {
 				throw new SimpleDBMappingException(
 						"The sort attribute must be present in at least one of the predicates of the expression. sortする場合、conditionにソートするキーを含める必要があります。これはSimpleDBの仕様です。http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/SortingDataSelect.html");
 			}
-			expression.append(this.sort.stringExpression());
+			expression.append(this.sort.describe());
 		}
 		return expression.toString();
 	}
