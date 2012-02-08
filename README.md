@@ -248,7 +248,12 @@ List<Book> books = mapper.query(Book.class, expression);
 Queryはこのように書く事も可能です。
 
 ```java
-List<Book> books = mapper.from(Book.class).where("title", Like, "スベらない%")).and("publishedAt", GreaterThan, toDate("2010-01-01 00:00:00")).orderBy("publishedAt", DESC).limit(100).fetch();
+List<Book> books = mapper.from(Book.class)
+	.where("title", Like, "スベらない%"))
+	.and("publishedAt", GreaterThan, toDate("2010-01-01 00:00:00"))
+	.orderBy("publishedAt", DESC)
+	.limit(100)
+	.fetch();
 ```
 
 booksが大量にある場合、QueryExpressionにLimitをセットしてください。セットしない場合はSimpleDBのデフォルト値である100がセットされます。また、セットできる最大値はSimpleDBの制限から2500です。
