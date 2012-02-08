@@ -235,12 +235,20 @@ SimpleDBに永続化されたPOJOを取得したい場合はやり方が二種�
 Book fetchedBook = mapper.load(Book.class, 123L);
 
 // Queryを指定する方法 
-Condition condition = new Condition("title", ComparisonOperator.Equals, "すごい本");
+Condition condition = new Condition("title", Like, "スベらない%");
 QueryExpression expression = new QueryExpression(condition);
-Sort sort = new Sort("title");
+expression.addAndCondition(new Condition("publishedAt", GreaterThan, toDate("2010-01-01 00:00:00"));
+Sort sort = new Sort(DESC, "publishedAt");
 expression.setSort(sort);
+expression.setLimit(100);
  
 List<Book> books = mapper.query(Book.class, expression);
+```
+
+Queryはこのように書く事も可能です。
+
+```java
+List<Book> books = mapper.from(Book.class).where("title", Like, "スベらない%")).and("publishedAt", GreaterThan, toDate("2010-01-01 00:00:00")).orderBy("publishedAt", DESC).limit(100).fetch();
 ```
 
 booksが大量にある場合、QueryExpressionにLimitをセットしてください。セットしない場合はSimpleDBのデフォルト値である100がセットされます。また、セットできる最大値はSimpleDBの制限から2500です。
