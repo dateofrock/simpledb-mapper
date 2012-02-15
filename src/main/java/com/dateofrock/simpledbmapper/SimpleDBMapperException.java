@@ -20,19 +20,19 @@ package com.dateofrock.simpledbmapper;
  * 
  * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-public class SimpleDBMappingException extends RuntimeException {
+public class SimpleDBMapperException extends RuntimeException {
 
 	private static final long serialVersionUID = 6240920032845919234L;
 
-	public SimpleDBMappingException(String message) {
+	public SimpleDBMapperException(String message) {
 		super(message);
 	}
 
-	public SimpleDBMappingException(String message, Exception e) {
+	public SimpleDBMapperException(String message, Exception e) {
 		super(message, e);
 	}
 
-	public SimpleDBMappingException(Exception e) {
+	public SimpleDBMapperException(Exception e) {
 		super(e);
 	}
 

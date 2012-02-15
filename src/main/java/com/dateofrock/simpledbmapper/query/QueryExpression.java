@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.dateofrock.simpledbmapper.SimpleDBDomain;
-import com.dateofrock.simpledbmapper.SimpleDBMappingException;
+import com.dateofrock.simpledbmapper.SimpleDBMapperException;
 
 /**
  * select queryを発行する際のwhere文を表現するクラスです。
@@ -102,7 +102,7 @@ public class QueryExpression {
 
 		if (this.sort != null) {
 			if (!attributeNames.contains(this.sort.getAttributeName())) {
-				throw new SimpleDBMappingException(
+				throw new SimpleDBMapperException(
 						"The sort attribute must be present in at least one of the predicates of the expression. sortする場合、conditionにソートするキーを含める必要があります。これはSimpleDBの仕様です。http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/SortingDataSelect.html");
 			}
 			expression.append(this.sort.describe());

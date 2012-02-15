@@ -183,7 +183,7 @@ public class SimpleDBMapperTest {
 
 	}
 
-	@Test
+//	@Test
 	public void testManyBooks() throws Exception {
 		List<Book> manyBooks = new ArrayList<Book>();
 		for (int i = 0; i < 10; i++) {

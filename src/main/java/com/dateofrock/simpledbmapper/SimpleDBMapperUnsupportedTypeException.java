@@ -13,22 +13,17 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package model;
-
-import java.util.Set;
-
-import com.dateofrock.simpledbmapper.SimpleDBAttribute;
-import com.dateofrock.simpledbmapper.SimpleDBDomain;
+package com.dateofrock.simpledbmapper;
 
 /**
- * テスト用モデル
- * 
  * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-@SimpleDBDomain(domainName = "SimpleDBMapper-Book", s3BucketName = "dateofrock-testing", s3KeyPrefix = "simpledb-mapper/")
-public class BookSubClass extends Book {
+public class SimpleDBMapperUnsupportedTypeException extends Exception {
 
-	@SimpleDBAttribute(attributeName = "tags")
-	public Set<String> tags;
+	private static final long serialVersionUID = -6063503727746239013L;
+
+	public SimpleDBMapperUnsupportedTypeException(String message) {
+		super(message);
+	}
 
 }

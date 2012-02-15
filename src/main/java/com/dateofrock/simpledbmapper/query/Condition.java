@@ -20,7 +20,7 @@ import static com.dateofrock.simpledbmapper.SimpleDBDomain.*;
 
 import java.util.Date;
 
-import com.dateofrock.simpledbmapper.SimpleDBMappingException;
+import com.dateofrock.simpledbmapper.SimpleDBMapperException;
 
 /**
  * 条件文
@@ -78,7 +78,7 @@ public class Condition {
 		} else if (this.attributeValue instanceof Boolean) {
 			expression.append(String.valueOf(this.attributeValue));
 		} else {
-			throw new SimpleDBMappingException("attributeValueの型が非サポートです。" + this.attributeValue);
+			throw new SimpleDBMapperException("attributeValueの型が非サポートです。" + this.attributeValue);
 		}
 		expression.append("'");
 

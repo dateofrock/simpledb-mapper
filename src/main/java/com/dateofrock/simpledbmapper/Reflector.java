@@ -18,6 +18,8 @@ package com.dateofrock.simpledbmapper;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
+import java.nio.channels.UnsupportedAddressTypeException;
+import java.sql.Blob;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -40,8 +42,8 @@ import com.dateofrock.simpledbmapper.util.IOUtils;
  */
 class Reflector {
 
-	List<Field> getDeclaredSuperFields(final Class<?> clazz) {
-		List<Field> fields = new ArrayList<Field>();
+	Set<Field> listAllFields(final Class<?> clazz) {
+		Set<Field> fields = new HashSet<Field>();
 		Field[] thisFields = clazz.getDeclaredFields();
 		for (Field field : thisFields) {
 			fields.add(field);
@@ -62,24 +64,39 @@ class Reflector {
 	}
 
 	Field findFieldByAttributeName(Class<?> clazz, String attributeName) {
-		List<Field> fields = getDeclaredSuperFields(clazz);
-		for (Field field : fields) {
+		for (Field field : listAllFields(clazz)) {
 			// SimpleDBAttribute
-			SimpleDBAttribute attribute = field.getAnnotation(SimpleDBAttribute.class);
-			if (attribute != null) {
-				if (attribute.attributeName().equals(attributeName)) {
+			SimpleDBAttribute attr = field.getAnnotation(SimpleDBAttribute.class);
+			if (attr != null) {
+				if (attr.attributeName().isEmpty()) {
+					if (field.getName().equals(attributeName)) {
+						return field;
+					}
+				}
+				if (attr.attributeName().equals(attributeName)) {
 					return field;
 				}
 			}
-			//
+			// SimpleDBBlob
 			SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
 			if (blob != null) {
+				if (blob.attributeName().isEmpty()) {
+					if (field.getName().equals(attributeName)) {
+						return field;
+					}
+				}
 				if (blob.attributeName().equals(attributeName)) {
 					return field;
 				}
 			}
+			// SimpleDBVersionAttribute
 			SimpleDBVersionAttribute version = field.getAnnotation(SimpleDBVersionAttribute.class);
 			if (version != null) {
+				if (version.attributeName().isEmpty()) {
+					if (field.getName().equals(attributeName)) {
+						return field;
+					}
+				}
 				if (version.attributeName().equals(attributeName)) {
 					return field;
 				}
@@ -89,8 +106,7 @@ class Reflector {
 	}
 
 	Field findItemNameField(Class<?> clazz) {
-		List<Field> fields = getDeclaredSuperFields(clazz);
-		for (Field field : fields) {
+		for (Field field : listAllFields(clazz)) {
 			SimpleDBItemName sdbItemName = field.getAnnotation(SimpleDBItemName.class);
 			if (sdbItemName != null) {
 				return field;
@@ -100,8 +116,7 @@ class Reflector {
 	}
 
 	Field findVersionAttributeField(Class<?> clazz) {
-		List<Field> fields = getDeclaredSuperFields(clazz);
-		for (Field field : fields) {
+		for (Field field : listAllFields(clazz)) {
 			SimpleDBVersionAttribute versionAttribute = field.getAnnotation(SimpleDBVersionAttribute.class);
 			if (versionAttribute != null) {
 				return field;
@@ -110,10 +125,9 @@ class Reflector {
 		return null;
 	}
 
-	List<Field> findBlobFields(Class<?> clazz) {
-		List<Field> list = new ArrayList<Field>();
-		List<Field> fields = getDeclaredSuperFields(clazz);
-		for (Field field : fields) {
+	Set<Field> findBlobFields(Class<?> clazz) {
+		Set<Field> list = new HashSet<Field>();
+		for (Field field : listAllFields(clazz)) {
 			SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
 			if (blob != null) {
 				list.add(field);
@@ -122,28 +136,64 @@ class Reflector {
 		return list;
 	}
 
-	/**
-	 * @throws SimpleDBMappingException
-	 *             SimpleDBEntityアノテーションがない場合
-	 */
-	SimpleDBDomain getEntityAnnotation(Class<?> clazz) {
+	String getAttributeName(Field field) {
+		// SimpleDBAttribute
+		SimpleDBAttribute attr = field.getAnnotation(SimpleDBAttribute.class);
+		String attributeName = null;
+		if (attr != null) {
+			attributeName = attr.attributeName();
+			if (attributeName.isEmpty()) {
+				return field.getName();
+			}
+			return attributeName;
+		}
+		// SimpleDBBlob
+		SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
+		if (blob != null) {
+			attributeName = blob.attributeName();
+			if (attributeName.isEmpty()) {
+				return field.getName();
+			}
+			return attributeName;
+		}
+		//
+		SimpleDBVersionAttribute version = field.getAnnotation(SimpleDBVersionAttribute.class);
+		if (version != null) {
+			attributeName = version.attributeName();
+			if (attributeName.isEmpty()) {
+				return field.getName();
+			}
+			return attributeName;
+		}
+		return null;
+	}
+
+	SimpleDBDomain getDomainAnnotation(Class<?> clazz) {
 		SimpleDBDomain entity = clazz.getAnnotation(SimpleDBDomain.class);
 		if (entity == null) {
-			throw new SimpleDBMappingException(clazz + "は@SimpleDBEntityアノテーションがありません");
+			throw new SimpleDBMapperException(clazz + " has no @SimpleDBDomain annotation");
 		}
 		return entity;
 	}
 
-	String findDomainName(Class<?> clazz) {
-		return getEntityAnnotation(clazz).domainName();
+	String getDomainName(Class<?> clazz) {
+		return getDomainAnnotation(clazz).domainName();
 	}
 
-	String findS3BucketName(Class<?> clazz) {
-		return clazz.getAnnotation(SimpleDBDomain.class).s3BucketName();
+	String getS3BucketName(Class<?> clazz) {
+		return getDomainAnnotation(clazz).s3BucketName();
 	}
 
-	String findS3KeyPrefix(Class<?> clazz) {
-		return clazz.getAnnotation(SimpleDBDomain.class).s3KeyPrefix();
+	String getS3KeyPrefix(Class<?> clazz) {
+		return getDomainAnnotation(clazz).s3KeyPrefix();
+	}
+
+	String getS3ContentType(Field blobField) {
+		SimpleDBBlob blob = blobField.getAnnotation(SimpleDBBlob.class);
+		if (blob == null) {
+			throw new SimpleDBMapperException(blobField + " has not @SimpleDBBlob annotation");
+		}
+		return blob.contentType();
 	}
 
 	<T> void setFieldValueByAttribute(AmazonS3 s3, Class<T> clazz, T instance, Attribute attribute) {
@@ -159,34 +209,35 @@ class Reflector {
 				try {
 					versionField.set(instance, version);
 				} catch (Exception e) {
-					throw new SimpleDBMappingException("versionセットに失敗", e);
+					throw new SimpleDBMapperException("failed to set version", e);
 				}
 				return;
 			}
 		}
 
-		List<Field> fields = getDeclaredSuperFields(clazz);
+		Set<Field> fields = listAllFields(clazz);
 		for (Field field : fields) {
 			try {
 				// attribute/blob
 				// TODO Blobのダウンロードは平行処理にしたい
 				setAttributeAndBlobValueToField(s3, instance, field, attributeName, attributeValue);
 			} catch (Exception e) {
-				throw new SimpleDBMappingException("fieldのセットに失敗", e);
+				throw new SimpleDBMapperException("failed to set field value", e);
 			}
 
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private <T> void setAttributeAndBlobValueToField(AmazonS3 s3, T instance, Field field, String attributeName,
-			String attributeValue) throws IllegalAccessException, ParseException {
+	<T> void setAttributeAndBlobValueToField(AmazonS3 s3, T instance, Field field, String attributeName,
+			String attributeValue) throws IllegalAccessException, ParseException,
+			SimpleDBMapperUnsupportedTypeException {
 		Class<?> type;
 		type = field.getType();
 
 		// SimpleDBAttribute
 		SimpleDBAttribute sdbAttrAnnotation = field.getAnnotation(SimpleDBAttribute.class);
-		if (sdbAttrAnnotation != null && sdbAttrAnnotation.attributeName().equals(attributeName)) {
+		if (sdbAttrAnnotation != null && getAttributeName(field).equals(attributeName)) {
 			if (Set.class.isAssignableFrom(type)) {
 				// Set
 				Set<?> s = (Set<?>) field.get(instance);
@@ -220,7 +271,8 @@ class Reflector {
 					return;
 				} else {
 					// FIXME
-					throw new IllegalStateException("SetのgenericTypeはNumberかStringのみサポートしています");
+					throw new SimpleDBMapperUnsupportedTypeException(
+							"Supported genericType of Set are java.lang.Number or java.lang.String");
 				}
 			} else if (isDateType(type)) {
 				Date parsedDate = SimpleDBUtils.decodeDate(attributeValue);
@@ -241,13 +293,13 @@ class Reflector {
 			} else if (isBooleanType(type)) {
 				field.set(instance, new Boolean(attributeValue));
 			} else {
-				throw new SimpleDBMappingException("サポートしていない型です。" + type);
+				throw new SimpleDBMapperException("サポートしていない型です。" + type);
 			}
 		}
 
 		// SimpleDBBlob
 		SimpleDBBlob sdbBlobAnnotation = field.getAnnotation(SimpleDBBlob.class);
-		if (sdbBlobAnnotation != null && sdbBlobAnnotation.attributeName().equals(attributeName)) {
+		if (sdbBlobAnnotation != null && getAttributeName(field).equals(attributeName)) {
 			S3TaskResult taskResult = new S3TaskResult(Operation.DOWNLOAD, attributeName, null, null);
 			taskResult.setSimpleDBAttributeValue(attributeValue);
 			S3Object s3Obj = s3.getObject(taskResult.getBucketName(), taskResult.getKey());
@@ -263,7 +315,7 @@ class Reflector {
 		}
 	}
 
-	String formattedString(Object object) {
+	String toStringAsSimpleDBFormat(Object object) {
 		String itemNameInQuery = null;
 		if (object instanceof String) {// String
 			itemNameInQuery = (String) object;
@@ -274,7 +326,7 @@ class Reflector {
 		} else if (object instanceof Float) {// Float
 			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Float) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
 		} else {
-			throw new SimpleDBMappingException("itemNameはStringかIntegerかLong、Floatのどれかである必要があります。" + object);
+			throw new SimpleDBMapperException("itemNameはStringかIntegerかLong、Floatのどれかである必要があります。" + object);
 		}
 		return itemNameInQuery;
 	}
@@ -295,10 +347,10 @@ class Reflector {
 				itemName = SimpleDBUtils.encodeZeroPadding((Long) itemNameField.get(object),
 						SimpleDBDomain.MAX_NUMBER_DIGITS);
 			} else {
-				throw new SimpleDBMappingException(itemNameField + "はサポートしていない型です。");
+				throw new SimpleDBMapperException(itemNameField + "はサポートしていない型です。");
 			}
 		} catch (Exception e) {
-			throw new SimpleDBMappingException(object + "itemNameFieldから値を取得に失敗", e);
+			throw new SimpleDBMapperException(object + "itemNameFieldから値を取得に失敗", e);
 		}
 		return itemName;
 	}
@@ -329,6 +381,14 @@ class Reflector {
 
 	boolean isPrimitiveByteArrayType(Class<?> type) {
 		return type.getSimpleName().equals("byte[]");
+	}
+
+	boolean isAttributeField(Field field) {
+		return (field.getAnnotation(SimpleDBAttribute.class) != null);
+	}
+
+	boolean isBlobField(Field field) {
+		return (field.getAnnotation(SimpleDBBlob.class) != null);
 	}
 
 }

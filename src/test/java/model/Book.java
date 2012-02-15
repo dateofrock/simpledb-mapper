@@ -36,7 +36,7 @@ public class Book {
 	@SimpleDBItemName
 	public Long id;
 
-	@SimpleDBAttribute(attributeName = "title")
+	@SimpleDBAttribute
 	public String title;
 
 	@SimpleDBAttribute(attributeName = "isbn")
@@ -60,7 +60,7 @@ public class Book {
 	@SimpleDBAttribute(attributeName = "available")
 	public boolean available;
 
-	@SimpleDBBlob(attributeName = "review", contentType = "text/plain")
+	@SimpleDBBlob(contentType = "text/plain")
 	public String review;
 
 	@SimpleDBBlob(attributeName = "coverImage", contentType = "image/jpeg", fetch = FetchType.LAZY)

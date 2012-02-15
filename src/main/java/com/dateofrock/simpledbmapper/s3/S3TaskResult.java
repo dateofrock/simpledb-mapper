@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Properties;
 
-import com.dateofrock.simpledbmapper.SimpleDBMappingException;
+import com.dateofrock.simpledbmapper.SimpleDBMapperException;
 
 /**
  * 
@@ -56,7 +56,7 @@ public class S3TaskResult {
 		try {
 			prop.store(byteOut, null);
 		} catch (IOException e) {
-			throw new SimpleDBMappingException("Propertiesのストアに失敗", e);
+			throw new SimpleDBMapperException("Propertiesのストアに失敗", e);
 		} finally {
 			try {
 				byteOut.close();
@@ -72,7 +72,7 @@ public class S3TaskResult {
 		try {
 			prop.load(reader);
 		} catch (IOException e) {
-			throw new SimpleDBMappingException("Propertiesのロードに失敗", e);
+			throw new SimpleDBMapperException("Propertiesのロードに失敗", e);
 		} finally {
 			reader.close();
 		}

@@ -37,7 +37,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface SimpleDBBlob {
 
-	String attributeName();
+	String attributeName() default "";
 
 	String contentType() default "";
 

@@ -95,7 +95,6 @@ public class SimpleDBMapper {
 		this.blobEagerFetchList.remove(fieldName);
 	}
 
-	@Deprecated
 	public void resetEagerBlobFetch() {
 		this.blobEagerFetchList = new ArrayList<String>();
 	}
@@ -106,7 +105,7 @@ public class SimpleDBMapper {
 	 * @throws SimpleDBMapperNotEmptyException
 	 */
 	public void dropDomainIfEmpty(Class<?> entityClass) throws SimpleDBMapperNotEmptyException {
-		String domainName = this.reflector.findDomainName(entityClass);
+		String domainName = this.reflector.getDomainName(entityClass);
 		int count = 0;
 		try {
 			count = this.countAll(entityClass);
@@ -127,7 +126,7 @@ public class SimpleDBMapper {
 	 * @see AmazonSimpleDB#createDomain(CreateDomainRequest)
 	 */
 	public void createDomain(Class<?> entityClass) {
-		String domainName = this.reflector.findDomainName(entityClass);
+		String domainName = this.reflector.getDomainName(entityClass);
 		this.sdb.createDomain(new CreateDomainRequest(domainName));
 	}
 
@@ -143,36 +142,37 @@ public class SimpleDBMapper {
 	 */
 	public <T> void save(T object) {
 		Class<?> clazz = object.getClass();
-		String domainName = this.reflector.findDomainName(clazz);
+		String domainName = this.reflector.getDomainName(clazz);
 
 		Field itemNameField = this.reflector.findItemNameField(clazz);
 		if (itemNameField == null) {
-			throw new SimpleDBMappingException(object + "@SimpleDBItemNameアノテーションがありません");
+			throw new SimpleDBMapperException(object + "@SimpleDBItemNameアノテーションがありません");
 		}
 
 		String itemName = null;
 		itemName = this.reflector.getItemNameAsSimpleDBFormat(object, itemNameField);
 
-		// FIXME
-		List<Field> fields = this.reflector.getDeclaredSuperFields(clazz);
+		Set<Field> allFields = this.reflector.listAllFields(clazz);
 		Map<String, Object> attributeMap = new HashMap<String, Object>();
 		List<S3BlobReference> blobList = new ArrayList<S3BlobReference>();
-		for (Field field : fields) {
+		for (Field field : allFields) {
 			try {
-				SimpleDBAttribute attr = field.getAnnotation(SimpleDBAttribute.class);
-				if (attr != null) {
-					attributeMap.put(attr.attributeName(), field.get(object));
-				}
-				SimpleDBBlob blob = field.getAnnotation(SimpleDBBlob.class);
-				if (blob != null) {
-					// FIXME バケット名、KeyPrefixの持ち方を再考するべき
-					S3BlobReference s3BlobRef = new S3BlobReference(blob.attributeName(),
-							this.reflector.findS3BucketName(clazz), this.reflector.findS3KeyPrefix(clazz),
-							blob.contentType(), field.get(object));
-					blobList.add(s3BlobRef);
+				String attributeName = this.reflector.getAttributeName(field);
+				if (attributeName != null) {
+					if (this.reflector.isAttributeField(field)) {
+						attributeMap.put(attributeName, field.get(object));
+					} else if (this.reflector.isBlobField(field)) {
+						String s3BucketName = this.reflector.getS3BucketName(clazz);
+						String s3KeyPrefix = this.reflector.getS3KeyPrefix(clazz);
+						String s3ContentType = this.reflector.getS3ContentType(field);
+						// FIXME
+						S3BlobReference s3BlobRef = new S3BlobReference(attributeName, s3BucketName, s3KeyPrefix,
+								s3ContentType, field.get(object));
+						blobList.add(s3BlobRef);
+					}
 				}
 			} catch (Exception e) {
-				throw new SimpleDBMappingException(e);
+				throw new SimpleDBMapperException(e);
 			}
 		}
 
@@ -219,7 +219,7 @@ public class SimpleDBMapper {
 				Boolean b = (Boolean) sdbValue;
 				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, String.valueOf(b), true));
 			} else {
-				throw new SimpleDBMappingException("フィールド: " + sdbAttributeName + " はサポート対象外の型です。"
+				throw new SimpleDBMapperException("フィールド: " + sdbAttributeName + " はサポート対象外の型です。"
 						+ sdbAttributeName.getClass());
 			}
 		}
@@ -230,13 +230,13 @@ public class SimpleDBMapper {
 		for (S3BlobReference s3BlobRef : blobList) {
 			String bucketName = s3BlobRef.getS3BucketName();
 			if (bucketName == null) {
-				throw new SimpleDBMappingException("Blobにはs3BucketNameの指定が必須です");
+				throw new SimpleDBMapperException("Blobにはs3BucketNameの指定が必須です");
 			}
 
 			StringBuilder s3Key = new StringBuilder();
 			String prefix = s3BlobRef.getPrefix();
 			if (prefix == null) {
-				throw new SimpleDBMappingException("Blobのprefixにnullは指定できません");
+				throw new SimpleDBMapperException("Blobのprefixにnullは指定できません");
 			}
 			prefix = prefix.trim();
 			s3Key.append(prefix);
@@ -262,7 +262,7 @@ public class SimpleDBMapper {
 					// BlobがByte配列
 					input = new ByteArrayInputStream((byte[]) blobObject);
 				} else {
-					throw new SimpleDBMappingException("Blobに指定できるクラスはStringもしくはbyte[]のみです");
+					throw new SimpleDBMapperException("Blobに指定できるクラスはStringもしくはbyte[]のみです");
 				}
 				S3Task uploadTask = new S3Task(this.s3, s3BlobRef.getAttributeName(), input, bucketName,
 						s3Key.toString(), s3BlobRef.getContentType());
@@ -291,13 +291,13 @@ public class SimpleDBMapper {
 						expected.setValue(currentVersion.toString());
 						req.setExpected(expected);
 					} else {
-						throw new SimpleDBMappingException("version属性はLongである必要があります。" + versionField);
+						throw new SimpleDBMapperException("version属性はLongである必要があります。" + versionField);
 					}
 				}
 
 				replacableAttrs.add(new ReplaceableAttribute(versionAttributeName, nowVersion.toString(), true));
 			} catch (Exception e) {
-				throw new SimpleDBMappingException("objectからversion取得に失敗: " + object, e);
+				throw new SimpleDBMapperException("objectからversion取得に失敗: " + object, e);
 			}
 		}
 
@@ -334,7 +334,7 @@ public class SimpleDBMapper {
 			try {
 				versionField.set(object, nowVersion);
 			} catch (Exception ignore) {
-				throw new SimpleDBMappingException("versionの値セットに失敗", ignore);
+				throw new SimpleDBMapperException("versionの値セットに失敗", ignore);
 			}
 		}
 
@@ -364,14 +364,14 @@ public class SimpleDBMapper {
 	 *            >Conditional Delete</a>になります。）
 	 */
 	public void delete(Object object) {
-		String domainName = this.reflector.findDomainName(object.getClass());
+		String domainName = this.reflector.getDomainName(object.getClass());
 		Field itemNameField = this.reflector.findItemNameField(object.getClass());
 		String itemName = this.reflector.getItemNameAsSimpleDBFormat(object, itemNameField);
 
 		// S3 Blob削除対象をリストアップ
 		GetAttributesResult results = this.sdb.getAttributes(new GetAttributesRequest(domainName, itemName));
 		List<Attribute> sdbAllAttrs = results.getAttributes();
-		List<Field> blobFields = this.reflector.findBlobFields(object.getClass());
+		Set<Field> blobFields = this.reflector.findBlobFields(object.getClass());
 		List<S3TaskResult> s3TaskResults = new ArrayList<S3TaskResult>();
 		for (Field field : blobFields) {
 			SimpleDBBlob blobAnnon = field.getAnnotation(SimpleDBBlob.class);
@@ -401,11 +401,11 @@ public class SimpleDBMapper {
 						expected.setValue(currentVersion.toString());
 						req.setExpected(expected);
 					} else {
-						throw new SimpleDBMappingException("version属性はLongである必要があります。" + versionField);
+						throw new SimpleDBMapperException("version属性はLongである必要があります。" + versionField);
 					}
 				}
 			} catch (Exception e) {
-				throw new SimpleDBMappingException("objectからversion取得に失敗: " + object, e);
+				throw new SimpleDBMapperException("objectからversion取得に失敗: " + object, e);
 			}
 		}
 		this.sdb.deleteAttributes(req);
@@ -519,7 +519,7 @@ public class SimpleDBMapper {
 	 *             見つからなかった場合にスローされます
 	 */
 	public <T> T load(Class<T> clazz, Object itemName) throws SimpleDBMapperNotFoundException {
-		String itemNameInQuery = this.reflector.formattedString(itemName);
+		String itemNameInQuery = this.reflector.toStringAsSimpleDBFormat(itemName);
 
 		String whereExpression = "itemName()=" + quoteValue(itemNameInQuery);
 		String query = createQuery(clazz, false, whereExpression, 0);
@@ -540,11 +540,11 @@ public class SimpleDBMapper {
 
 	private <T> List<T> fetch(Class<T> clazz, String query) {
 		SelectRequest selectRequest = new SelectRequest(query.toString(), this.config.isConsistentRead());
-		// TODO nextTokenの保持の仕方
 		if (this.selectNextToken != null) {
 			selectRequest.setNextToken(this.selectNextToken);
 			this.selectNextToken = null;
 		}
+
 		SelectResult result = this.sdb.select(selectRequest);
 		List<Item> items = result.getItems();
 		if (items.isEmpty()) {
@@ -553,7 +553,6 @@ public class SimpleDBMapper {
 		this.selectNextToken = result.getNextToken();
 
 		List<T> objects = new ArrayList<T>();
-
 		Field itemNameField = this.reflector.findItemNameField(clazz);
 		try {
 			// SDBのitemでループ
@@ -574,7 +573,7 @@ public class SimpleDBMapper {
 					itemNameField.set(instance, itemName);
 				} else {
 					// FIXME
-					throw new SimpleDBMappingException("itemNameはStringかIntegerかLong、Floatのどれかである必要があります。");
+					throw new SimpleDBMapperException("itemNameはStringかIntegerかLong、Floatのどれかである必要があります。");
 				}
 
 				// itemのattributesでループ
@@ -610,14 +609,14 @@ public class SimpleDBMapper {
 			}
 
 		} catch (Exception e) {
-			throw new SimpleDBMappingException(e);
+			throw new SimpleDBMapperException(e);
 		}
 
 		return objects;
 	}
 
 	private <T> String createQuery(Class<T> clazz, boolean isCount, String whereExpression, int limit) {
-		String domainName = this.reflector.findDomainName(clazz);
+		String domainName = this.reflector.getDomainName(clazz);
 		StringBuilder query = new StringBuilder("select ");
 		if (isCount) {
 			query.append("count(*)");
