@@ -15,22 +15,19 @@
  */
 package com.dateofrock.simpledbmapper;
 
+import static com.amazonaws.services.simpledb.util.SimpleDBUtils.*;
+
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
-import java.nio.channels.UnsupportedAddressTypeException;
-import java.sql.Blob;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.simpledb.model.Attribute;
-import com.amazonaws.services.simpledb.util.SimpleDBUtils;
 import com.dateofrock.simpledbmapper.s3.S3TaskResult;
 import com.dateofrock.simpledbmapper.s3.S3TaskResult.Operation;
 import com.dateofrock.simpledbmapper.util.IOUtils;
@@ -196,7 +193,7 @@ class Reflector {
 		return blob.contentType();
 	}
 
-	<T> void setFieldValueByAttribute(AmazonS3 s3, Class<T> clazz, T instance, Attribute attribute) {
+	<T> void setFieldValueFromAttribute(AmazonS3 s3, Class<T> clazz, T instance, Attribute attribute) {
 		String attributeName = attribute.getName();
 		String attributeValue = attribute.getValue();
 
@@ -230,8 +227,7 @@ class Reflector {
 
 	@SuppressWarnings("unchecked")
 	<T> void setAttributeAndBlobValueToField(AmazonS3 s3, T instance, Field field, String attributeName,
-			String attributeValue) throws IllegalAccessException, ParseException,
-			SimpleDBMapperUnsupportedTypeException {
+			String attributeValue) throws IllegalAccessException, ParseException {
 		Class<?> type;
 		type = field.getType();
 
@@ -271,11 +267,11 @@ class Reflector {
 					return;
 				} else {
 					// FIXME
-					throw new SimpleDBMapperUnsupportedTypeException(
-							"Supported genericType of Set are java.lang.Number or java.lang.String");
+					throw new SimpleDBMapperUnsupportedTypeException(s.toString() + " genericType: " + setClass
+							+ " is not supported.");
 				}
 			} else if (isDateType(type)) {
-				Date parsedDate = SimpleDBUtils.decodeDate(attributeValue);
+				Date parsedDate = decodeDate(attributeValue);
 				field.set(instance, parsedDate);
 				return;
 			} else if (isStringType(type)) {
@@ -315,44 +311,54 @@ class Reflector {
 		}
 	}
 
-	String toStringAsSimpleDBFormat(Object object) {
-		String itemNameInQuery = null;
-		if (object instanceof String) {// String
-			itemNameInQuery = (String) object;
-		} else if (object instanceof Integer) {// Integer
-			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Integer) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
-		} else if (object instanceof Long) {// Long
-			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Long) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
-		} else if (object instanceof Float) {// Float
-			itemNameInQuery = SimpleDBUtils.encodeZeroPadding((Float) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
+	String encodeObjectAsSimpleDBFormat(Object object) {
+		String value = null;
+		Class<?> type = object.getClass();
+		if (isStringType(type)) {
+			value = (String) object;
+		} else if (isIntegerType(type)) {
+			value = encodeZeroPadding((Integer) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
+		} else if (isLongType(type)) {
+			value = encodeZeroPadding((Long) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
+		} else if (isFloatType(type)) {
+			value = encodeZeroPadding((Float) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
+		} else if (isDateType(type)) {
+			value = encodeDate((Date) object);
+		} else if (isBooleanType(type)) {
+			value = Boolean.toString((Boolean) object);
 		} else {
-			throw new SimpleDBMapperException("itemNameはStringかIntegerかLong、Floatのどれかである必要があります。" + object);
+			throw new SimpleDBMapperUnsupportedTypeException(type + " is not supprted.");
 		}
-		return itemNameInQuery;
+		return value;
 	}
 
-	String getItemNameAsSimpleDBFormat(Object object, Field itemNameField) {
-		String itemName = null;
-		try {
-			Class<?> itemNameType = itemNameField.getType();
-			if (isStringType(itemNameType)) {
-				itemName = (String) itemNameField.get(object);
-			} else if (isIntegerType(itemNameType)) {
-				itemName = SimpleDBUtils.encodeZeroPadding((Integer) itemNameField.get(object),
-						SimpleDBDomain.MAX_NUMBER_DIGITS);
-			} else if (isFloatType(itemNameType)) {
-				itemName = SimpleDBUtils.encodeZeroPadding((Float) itemNameField.get(object),
-						SimpleDBDomain.MAX_NUMBER_DIGITS);
-			} else if (isLongType(itemNameType)) {
-				itemName = SimpleDBUtils.encodeZeroPadding((Long) itemNameField.get(object),
-						SimpleDBDomain.MAX_NUMBER_DIGITS);
-			} else {
-				throw new SimpleDBMapperException(itemNameField + "はサポートしていない型です。");
-			}
-		} catch (Exception e) {
-			throw new SimpleDBMapperException(object + "itemNameFieldから値を取得に失敗", e);
+	String encodeItemNameAsSimpleDBFormat(Object object, Field itemNameField) {
+		Class<?> type = itemNameField.getType();
+		if (!isItemNameSupportedType(type)) {
+			throw new SimpleDBMapperUnsupportedTypeException(type + " is not supprted.");
 		}
+		Object itemNameFieldValue = null;
+		try {
+			itemNameFieldValue = itemNameField.get(object);
+		} catch (Exception e) {
+			throw new SimpleDBMapperException(e);
+		}
+		String itemName = null;
+		itemName = encodeObjectAsSimpleDBFormat(itemNameFieldValue);
 		return itemName;
+	}
+
+	Object decodeItemNameFromSimpleDBFormat(Class<?> type, String itemName) {
+		if (isIntegerType(type)) {
+			return decodeZeroPaddingInt(itemName);
+		} else if (isFloatType(type)) {
+			return decodeZeroPaddingFloat(itemName);
+		} else if (isLongType(type)) {
+			return decodeZeroPaddingLong(itemName);
+		} else if (isStringType(type)) {
+			return itemName;
+		}
+		throw new SimpleDBMapperUnsupportedTypeException(type + " is not supprted.");
 	}
 
 	boolean isDateType(Class<?> type) {
@@ -391,4 +397,11 @@ class Reflector {
 		return (field.getAnnotation(SimpleDBBlob.class) != null);
 	}
 
+	boolean isItemNameSupportedType(Class<?> type) {
+		return (isStringType(type) || isLongType(type) || isFloatType(type) || isIntegerType(type));
+	}
+
+	boolean isAttributeSupprtedType(Class<?> type) {
+		return (isDateType(type) || isStringType(type) || isBooleanType(type) || isLongType(type) || isFloatType(type) || isIntegerType(type));
+	}
 }

@@ -47,34 +47,34 @@ public class Book {
  	@SimpleDBItemName
 	public Long id;
  	
-	@SimpleDBAttribute(attributeName = "title")
+	@SimpleDBAttribute
 	public String title;
 
 	@SimpleDBAttribute(attributeName = "isbn")
 	public String isbn;
 
-	@SimpleDBAttribute(attributeName = "authors")
+	@SimpleDBAttribute
 	public Set<String> authors; 
 
-	@SimpleDBAttribute(attributeName = "publishedAt")
+	@SimpleDBAttribute
 	public Date publishedAt;
 	
-	@SimpleDBAttribute(attributeName = "price")
+	@SimpleDBAttribute
 	public Integer price;
  
-	@SimpleDBAttribute(attributeName = "height")
+	@SimpleDBAttribute
 	public Float height;
  
-	@SimpleDBAttribute(attributeName = "width")
+	@SimpleDBAttribute
 	public Float width;
  	
-	@SimpleDBAttribute(attributeName = "available")
+	@SimpleDBAttribute
 	public boolean available;
 
-	@SimpleDBBlob(attributeName = "review", contentType = "text/plain")
+	@SimpleDBBlob(contentType = "text/plain")
 	public String review;
 
-	@SimpleDBBlob(attributeName = "coverImage", contentType = "image/jpeg", fetch = FetchType.LAZY)
+	@SimpleDBBlob(contentType = "image/jpeg", fetch = FetchType.LAZY)
 	public byte[] coverImage;
 
 	@SimpleDBVersionAttribute
@@ -117,6 +117,13 @@ attributeとして指定できる型は以下に制約されます。
 * java.util.Set&lt;java.lang.Long&gt;
 * java.util.Set&lt;java.util.Date&gt;
 
+アノテーションでは以下を指定する事が可能です。
+
+<dl>
+<dt>attributeName</dt><dd>SimpleDBの属性名指定。省略時はフィールド名が使用されます。</dd>
+フォーマンスは大幅に落ちます。指定には、FetchType.EAGERかFetchType.LAZYを指定します。simpledb-mapperは、遅延ロードのような機能はサポートしていません。単に取得しないだけです。</dd>
+</dl>
+
 
 ###@SimpleDBBlob
 @SimpleDBBlobアノテーションで指定されたフィールドは、SimpleDBの制限である1024byteを超える大きなデータを永続化したい場合に使います。データそのものはS3に保存され、SimpleDBのアトリビュートにはその参照情報（バケット名、キーなど）が記載されます。simpledb-mapperはその参照情報をもとに自動的にPOJOにデータをセットします。
@@ -128,9 +135,10 @@ attributeとして指定できる型は以下に制約されます。
 
 のみです。
 
-また、以下を指定する事が可能です。
+アノテーションでは以下を指定する事が可能です。
 
 <dl>
+<dt>attributeName</dt><dd>SimpleDBの属性名指定。省略時はフィールド名が使用されます。</dd>
 <dt>contentType</dt><dd>S3に保存する際のContent-Type指定</dd>
 <dt>fetch</dt><dd>S3より随時データを取得するかどうか。デフォルトでは常に取得しますが、パフォーマンスは大幅に落ちます。指定には、FetchType.EAGERかFetchType.LAZYを指定します。simpledb-mapperは、遅延ロードのような機能はサポートしていません。単に取得しないだけです。</dd>
 </dl>

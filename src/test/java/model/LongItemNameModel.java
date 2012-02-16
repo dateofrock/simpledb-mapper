@@ -13,17 +13,16 @@
  *	See the License for the specific language governing permissions and
  *	limitations under the License.
  */
-package com.dateofrock.simpledbmapper;
+package model;
+
+import com.dateofrock.simpledbmapper.SimpleDBDomain;
+import com.dateofrock.simpledbmapper.SimpleDBItemName;
 
 /**
  * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
-public class SimpleDBMapperUnsupportedTypeException extends RuntimeException {
-
-	private static final long serialVersionUID = -6063503727746239013L;
-
-	public SimpleDBMapperUnsupportedTypeException(String message) {
-		super(message);
-	}
-
+@SimpleDBDomain(domainName = "tmp")
+public class LongItemNameModel {
+	@SimpleDBItemName
+	public long itemName;
 }

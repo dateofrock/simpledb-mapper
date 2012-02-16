@@ -25,7 +25,6 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -150,7 +149,7 @@ public class SimpleDBMapper {
 		}
 
 		String itemName = null;
-		itemName = this.reflector.getItemNameAsSimpleDBFormat(object, itemNameField);
+		itemName = this.reflector.encodeItemNameAsSimpleDBFormat(object, itemNameField);
 
 		Set<Field> allFields = this.reflector.listAllFields(clazz);
 		Map<String, Object> attributeMap = new HashMap<String, Object>();
@@ -188,39 +187,12 @@ public class SimpleDBMapper {
 			} else if (sdbValue instanceof Set) { // Set
 				Set<?> c = (Set<?>) sdbValue;
 				for (Object val : c) {
-					if (val instanceof Integer) {
-						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Integer) val,
-								MAX_NUMBER_DIGITS), true));
-					} else if (val instanceof Float) {
-						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Float) val,
-								MAX_NUMBER_DIGITS), true));
-					} else if (val instanceof Long) {
-						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Long) val,
-								MAX_NUMBER_DIGITS), true));
-					} else if (val instanceof String) {
-						replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, (String) val, true));
-					}
+					replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, this.reflector
+							.encodeObjectAsSimpleDBFormat(val), true));
 				}
-			} else if (sdbValue instanceof Date) {// Date
-				Date d = (Date) sdbValue;
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeDate(d), true));
-			} else if (sdbValue instanceof Integer) {// Integer or int
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Integer) sdbValue,
-						MAX_NUMBER_DIGITS), true));
-			} else if (sdbValue instanceof Float) {// Float or float
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Float) sdbValue,
-						MAX_NUMBER_DIGITS), true));
-			} else if (sdbValue instanceof Long) {// Long or long
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, encodeZeroPadding((Long) sdbValue,
-						MAX_NUMBER_DIGITS), true));
-			} else if (sdbValue instanceof String) {// String
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, (String) sdbValue, true));
-			} else if (sdbValue instanceof Boolean) {// Boolean or boolean
-				Boolean b = (Boolean) sdbValue;
-				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, String.valueOf(b), true));
 			} else {
-				throw new SimpleDBMapperException("フィールド: " + sdbAttributeName + " はサポート対象外の型です。"
-						+ sdbAttributeName.getClass());
+				replacableAttrs.add(new ReplaceableAttribute(sdbAttributeName, this.reflector
+						.encodeObjectAsSimpleDBFormat(sdbValue), true));
 			}
 		}
 
@@ -366,7 +338,7 @@ public class SimpleDBMapper {
 	public void delete(Object object) {
 		String domainName = this.reflector.getDomainName(object.getClass());
 		Field itemNameField = this.reflector.findItemNameField(object.getClass());
-		String itemName = this.reflector.getItemNameAsSimpleDBFormat(object, itemNameField);
+		String itemName = this.reflector.encodeItemNameAsSimpleDBFormat(object, itemNameField);
 
 		// S3 Blob削除対象をリストアップ
 		GetAttributesResult results = this.sdb.getAttributes(new GetAttributesRequest(domainName, itemName));
@@ -517,9 +489,14 @@ public class SimpleDBMapper {
 	 *            >AWSドキュメント参照</a>
 	 * @throws SimpleDBMapperNotFoundException
 	 *             見つからなかった場合にスローされます
+	 * @throws SimpleDBMapperUnsupportedTypeException
 	 */
 	public <T> T load(Class<T> clazz, Object itemName) throws SimpleDBMapperNotFoundException {
-		String itemNameInQuery = this.reflector.toStringAsSimpleDBFormat(itemName);
+		if (!this.reflector.isItemNameSupportedType(itemName.getClass())) {
+			throw new SimpleDBMapperUnsupportedTypeException(itemName.getClass() + " is not supported.");
+		}
+
+		String itemNameInQuery = this.reflector.encodeObjectAsSimpleDBFormat(itemName);
 
 		String whereExpression = "itemName()=" + quoteValue(itemNameInQuery);
 		String query = createQuery(clazz, false, whereExpression, 0);
@@ -563,18 +540,7 @@ public class SimpleDBMapper {
 				// ItemNameのセット
 				Class<?> type = itemNameField.getType();
 				String itemName = item.getName();
-				if (this.reflector.isIntegerType(type)) {
-					itemNameField.set(instance, decodeZeroPaddingInt(itemName));
-				} else if (this.reflector.isFloatType(type)) {
-					itemNameField.set(instance, decodeZeroPaddingFloat(itemName));
-				} else if (this.reflector.isLongType(type)) {
-					itemNameField.set(instance, decodeZeroPaddingLong(itemName));
-				} else if (this.reflector.isStringType(type)) {
-					itemNameField.set(instance, itemName);
-				} else {
-					// FIXME
-					throw new SimpleDBMapperException("itemNameはStringかIntegerかLong、Floatのどれかである必要があります。");
-				}
+				itemNameField.set(instance, this.reflector.decodeItemNameFromSimpleDBFormat(type, itemName));
 
 				// itemのattributesでループ
 				List<Attribute> attrs = item.getAttributes();
@@ -590,16 +556,16 @@ public class SimpleDBMapper {
 						String fieldName = attrField.getName();
 						if (this.blobEagerFetchList.contains(fieldName)) {
 							// 実行
-							this.reflector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
+							this.reflector.setFieldValueFromAttribute(this.s3, clazz, instance, attr);
 						} else {
 							FetchType fetchType = blobAnno.fetch();
 							if (fetchType == FetchType.EAGER) {
 								// 実行
-								this.reflector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
+								this.reflector.setFieldValueFromAttribute(this.s3, clazz, instance, attr);
 							}
 						}
 					} else {
-						this.reflector.setFieldValueByAttribute(this.s3, clazz, instance, attr);
+						this.reflector.setFieldValueFromAttribute(this.s3, clazz, instance, attr);
 					}
 
 				}
