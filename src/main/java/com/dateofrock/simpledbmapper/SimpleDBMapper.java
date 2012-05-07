@@ -33,6 +33,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.simpledb.AmazonSimpleDB;
 import com.amazonaws.services.simpledb.model.Attribute;
@@ -62,6 +65,8 @@ import com.dateofrock.simpledbmapper.s3.S3TaskResult.Operation;
  * @author Takehito Tanabe (dateofrock at gmail dot com)
  */
 public class SimpleDBMapper {
+
+	private static final Log log = LogFactory.getLog(SimpleDBMapper.class);
 
 	private AmazonSimpleDB sdb;
 	private AmazonS3 s3;
@@ -474,7 +479,11 @@ public class SimpleDBMapper {
 	public <T> List<T> select(Class<T> clazz, QueryExpression expression) {
 		String whereExpression = expression.describe();
 		String query = createQuery(clazz, false, whereExpression, expression.getLimit());
+		long t = System.currentTimeMillis();
 		List<T> objects = fetch(clazz, query);
+		if (log.isDebugEnabled()) {
+			log.debug(String.format("fetch time: %s(msec) query: %s", (System.currentTimeMillis() - t), query));
+		}
 		return objects;
 	}
 
