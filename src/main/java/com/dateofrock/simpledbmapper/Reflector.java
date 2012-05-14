@@ -23,6 +23,7 @@ import java.lang.reflect.ParameterizedType;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.amazonaws.services.s3.AmazonS3;
@@ -289,7 +290,10 @@ class Reflector {
 			} else if (isBooleanType(type)) {
 				field.set(instance, new Boolean(attributeValue));
 			} else {
-				throw new SimpleDBMapperException("サポートしていない型です。" + type);
+				if (type.isAssignableFrom(List.class)) {
+					new SimpleDBMapperUnsupportedTypeException(type + " is not supprted. Use java.util.Set.");
+				}
+				throw new SimpleDBMapperUnsupportedTypeException(type + " is not supprted.");
 			}
 		}
 
