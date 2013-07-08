@@ -54,7 +54,7 @@
 					<links>
 						<link>http://docs.amazonwebservices.com/AWSJavaSDK/latest/javadoc</link>
 					</links>
-					<javadocVersion>1.5</javadocVersion>
+					<javadocVersion>1.6</javadocVersion>
 				</configuration>
 			</plugin>
 		</plugins>
