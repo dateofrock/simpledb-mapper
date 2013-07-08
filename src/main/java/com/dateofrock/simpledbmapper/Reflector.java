@@ -347,6 +347,10 @@ class Reflector {
 		} catch (Exception e) {
 			throw new SimpleDBMapperException(e);
 		}
+		if (itemNameFieldValue == null) {
+			String message = "SimpleDB itemName: " + itemNameField + " MUST have some value.";
+			throw new SimpleDBMapperException(message);
+		}
 		String itemName = null;
 		itemName = encodeObjectAsSimpleDBFormat(itemNameFieldValue);
 		return itemName;
