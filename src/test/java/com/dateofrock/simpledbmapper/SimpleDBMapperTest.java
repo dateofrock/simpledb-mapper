@@ -76,8 +76,10 @@ public class SimpleDBMapperTest {
 
 		this.mapper = new SimpleDBMapper(sdb, s3);
 
-		// this.mapper.dropDomainIfEmpty(Book.class);
-		// this.mapper.createDomain(Book.class);
+		if (!this.mapper.isDomainExists(Book.class)) {
+			this.mapper.dropDomainIfEmpty(Book.class);
+			this.mapper.createDomain(Book.class);
+		}
 
 		List<Book> allBooks = this.mapper.selectAll(Book.class);
 		for (Book book : allBooks) {
