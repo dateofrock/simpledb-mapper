@@ -42,6 +42,7 @@ import com.amazonaws.services.simpledb.model.Attribute;
 import com.amazonaws.services.simpledb.model.CreateDomainRequest;
 import com.amazonaws.services.simpledb.model.DeleteAttributesRequest;
 import com.amazonaws.services.simpledb.model.DeleteDomainRequest;
+import com.amazonaws.services.simpledb.model.DomainMetadataRequest;
 import com.amazonaws.services.simpledb.model.GetAttributesRequest;
 import com.amazonaws.services.simpledb.model.GetAttributesResult;
 import com.amazonaws.services.simpledb.model.Item;
@@ -125,6 +126,16 @@ public class SimpleDBMapper {
 	}
 
 	/**
+	 * SimpleDBのドメインを強制削除します
+	 * 
+	 * @see AmazonSimpleDB#deleteDomain(DeleteDomainRequest)
+	 */
+	public void forceDropDomain(Class<?> entityClass) {
+		String domainName = this.reflector.getDomainName(entityClass);
+		this.sdb.deleteDomain(new DeleteDomainRequest(domainName));
+	}
+
+	/**
 	 * SimpleDBにドメインを作成します
 	 * 
 	 * @see AmazonSimpleDB#createDomain(CreateDomainRequest)
@@ -132,6 +143,33 @@ public class SimpleDBMapper {
 	public void createDomain(Class<?> entityClass) {
 		String domainName = this.reflector.getDomainName(entityClass);
 		this.sdb.createDomain(new CreateDomainRequest(domainName));
+
+		// ドメインが作成された直後はまだ使えないので、使えるようになるまでしばらく待つ。
+		int repeat = 3;
+		int wait = 300;
+		for (int i = 0; i < repeat; i++) {
+			if (isDomainExists(entityClass)) {
+				log.debug("domain " + domainName + " has created.");
+				return;
+			} else {
+				try {
+					Thread.sleep(wait);
+				} catch (InterruptedException ignore) {
+					// noop
+				}
+			}
+		}
+		log.warn("domain " + domainName + " is not avalilable.");
+	}
+
+	public boolean isDomainExists(Class<?> entityClass) {
+		String domainName = this.reflector.getDomainName(entityClass);
+		try {
+			this.sdb.domainMetadata(new DomainMetadataRequest(domainName));
+		} catch (NoSuchDomainException e) {
+			return false;
+		}
+		return true;
 	}
 
 	/**
