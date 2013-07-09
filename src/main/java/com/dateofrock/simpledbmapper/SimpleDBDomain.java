@@ -29,9 +29,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface SimpleDBDomain {
 
-	@Deprecated
-	public static final int MAX_NUMBER_DIGITS = 10;
-
 	/**
 	 * Maximum items in Select response
 	 * 

@@ -16,7 +16,7 @@
 package com.dateofrock.simpledbmapper.query;
 
 import static com.amazonaws.services.simpledb.util.SimpleDBUtils.*;
-import static com.dateofrock.simpledbmapper.SimpleDBDomain.*;
+import static com.dateofrock.simpledbmapper.SimpleDBAttribute.*;
 
 import java.util.Date;
 
@@ -70,11 +70,11 @@ public class Condition {
 		} else if (this.attributeValue instanceof Date) {
 			expression.append(encodeDate((Date) this.attributeValue));
 		} else if (this.attributeValue instanceof Integer) {
-			expression.append(encodeZeroPadding((Integer) this.attributeValue, MAX_NUMBER_DIGITS));
+			expression.append(encodeZeroPadding((Integer) this.attributeValue, DEFAULT_ZERO_PADDING_LENGTH));
 		} else if (this.attributeValue instanceof Float) {
-			expression.append(encodeZeroPadding((Float) this.attributeValue, MAX_NUMBER_DIGITS));
+			expression.append(encodeZeroPadding((Float) this.attributeValue, DEFAULT_ZERO_PADDING_LENGTH));
 		} else if (this.attributeValue instanceof Long) {
-			expression.append(encodeZeroPadding((Long) this.attributeValue, MAX_NUMBER_DIGITS));
+			expression.append(encodeZeroPadding((Long) this.attributeValue, DEFAULT_ZERO_PADDING_LENGTH));
 		} else if (this.attributeValue instanceof Boolean) {
 			expression.append(String.valueOf(this.attributeValue));
 		} else {

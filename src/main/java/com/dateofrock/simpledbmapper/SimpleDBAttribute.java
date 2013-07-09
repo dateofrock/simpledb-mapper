@@ -50,6 +50,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface SimpleDBAttribute {
 
+	public static final int DEFAULT_ZERO_PADDING_LENGTH = 10;
+
 	String attributeName() default "";
 
 }

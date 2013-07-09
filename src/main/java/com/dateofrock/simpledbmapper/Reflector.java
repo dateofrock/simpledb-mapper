@@ -321,11 +321,11 @@ class Reflector {
 		if (isStringType(type)) {
 			value = (String) object;
 		} else if (isIntegerType(type)) {
-			value = encodeZeroPadding((Integer) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
+			value = encodeZeroPadding((Integer) object, SimpleDBAttribute.DEFAULT_ZERO_PADDING_LENGTH);
 		} else if (isLongType(type)) {
-			value = encodeZeroPadding((Long) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
+			value = encodeZeroPadding((Long) object, SimpleDBAttribute.DEFAULT_ZERO_PADDING_LENGTH);
 		} else if (isFloatType(type)) {
-			value = encodeZeroPadding((Float) object, SimpleDBDomain.MAX_NUMBER_DIGITS);
+			value = encodeZeroPadding((Float) object, SimpleDBAttribute.DEFAULT_ZERO_PADDING_LENGTH);
 		} else if (isDateType(type)) {
 			value = encodeDate((Date) object);
 		} else if (isBooleanType(type)) {
