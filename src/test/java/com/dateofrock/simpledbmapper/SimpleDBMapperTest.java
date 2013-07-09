@@ -88,6 +88,11 @@ public class SimpleDBMapperTest {
 	}
 
 	@Test
+	public void testUtilityMethod() throws Exception {
+		assertEquals("SimpleDBMapper-Book", this.mapper.getDomainName(Book.class));
+	}
+
+	@Test
 	public void test() throws Exception {
 		Book book1 = newBook1(1000L);
 		this.mapper.save(book1);

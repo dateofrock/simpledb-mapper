@@ -110,7 +110,7 @@ public class SimpleDBMapper {
 	 * @throws SimpleDBMapperNotEmptyException
 	 */
 	public void dropDomainIfEmpty(Class<?> entityClass) throws SimpleDBMapperNotEmptyException {
-		String domainName = this.reflector.getDomainName(entityClass);
+		String domainName = getDomainName(entityClass);
 		int count = 0;
 		try {
 			count = this.countAll(entityClass);
@@ -126,12 +126,21 @@ public class SimpleDBMapper {
 	}
 
 	/**
+	 * SimpleDBのドメイン名を取得します
+	 * 
+	 * @param entityClass
+	 */
+	public String getDomainName(Class<?> entityClass) {
+		return this.reflector.getDomainName(entityClass);
+	}
+
+	/**
 	 * SimpleDBのドメインを強制削除します
 	 * 
 	 * @see AmazonSimpleDB#deleteDomain(DeleteDomainRequest)
 	 */
 	public void forceDropDomain(Class<?> entityClass) {
-		String domainName = this.reflector.getDomainName(entityClass);
+		String domainName = getDomainName(entityClass);
 		this.sdb.deleteDomain(new DeleteDomainRequest(domainName));
 	}
 
@@ -141,7 +150,7 @@ public class SimpleDBMapper {
 	 * @see AmazonSimpleDB#createDomain(CreateDomainRequest)
 	 */
 	public void createDomain(Class<?> entityClass) {
-		String domainName = this.reflector.getDomainName(entityClass);
+		String domainName = getDomainName(entityClass);
 		this.sdb.createDomain(new CreateDomainRequest(domainName));
 
 		// ドメインが作成された直後はまだ使えないので、使えるようになるまでしばらく待つ。
@@ -163,7 +172,7 @@ public class SimpleDBMapper {
 	}
 
 	public boolean isDomainExists(Class<?> entityClass) {
-		String domainName = this.reflector.getDomainName(entityClass);
+		String domainName = getDomainName(entityClass);
 		try {
 			this.sdb.domainMetadata(new DomainMetadataRequest(domainName));
 		} catch (NoSuchDomainException e) {
@@ -184,7 +193,7 @@ public class SimpleDBMapper {
 	 */
 	public <T> void save(T object) {
 		Class<?> clazz = object.getClass();
-		String domainName = this.reflector.getDomainName(clazz);
+		String domainName = getDomainName(clazz);
 
 		Field itemNameField = this.reflector.findItemNameField(clazz);
 		if (itemNameField == null) {
